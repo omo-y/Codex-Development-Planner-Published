@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   AI_OPTIONS,
   APP_IDEA_PRESETS,
+  APP_TYPES,
   BEGINNER_NOTES,
   COMMON_FEATURES,
   COMMON_SCREENS,
@@ -11,6 +12,8 @@ import {
   STORAGE_OPTIONS
 } from "@/lib/templates";
 import type { ProjectPlanInput, ProjectPlanResponse } from "@/types/project";
+
+type InputMode = "beginner" | "advanced";
 
 const defaultPreset = APP_IDEA_PRESETS[0];
 
@@ -158,7 +161,37 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
   );
 }
 
+type TextAreaFieldProps = {
+  label: string;
+  value: string;
+  placeholder?: string;
+  rows?: number;
+  onChange: (value: string) => void;
+};
+
+function TextAreaField({
+  label,
+  value,
+  placeholder,
+  rows = 5,
+  onChange
+}: TextAreaFieldProps) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-ink">{label}</span>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+      />
+    </label>
+  );
+}
+
 export default function Home() {
+  const [inputMode, setInputMode] = useState<InputMode>("beginner");
   const [form, setForm] = useState<ProjectPlanInput>(initialForm);
   const [selectedPresetTitle, setSelectedPresetTitle] = useState(
     defaultPreset.title
@@ -192,6 +225,9 @@ export default function Home() {
     ]).split("\n");
   }, [selectedPresetTitle]);
 
+  const selectedPreset = APP_IDEA_PRESETS.find(
+    (item) => item.title === selectedPresetTitle
+  );
   const canCopy = generatedPrompt.trim().length > 0;
 
   async function loadHistory() {
@@ -333,8 +369,14 @@ export default function Home() {
   function buildSubmitInput(): ProjectPlanInput {
     return {
       ...form,
-      features: itemsToLines([...linesToItems(form.features), ...linesToItems(customFeatures)]),
-      screens: itemsToLines([...linesToItems(form.screens), ...linesToItems(customScreens)])
+      features: itemsToLines([
+        ...linesToItems(form.features),
+        ...linesToItems(customFeatures)
+      ]),
+      screens: itemsToLines([
+        ...linesToItems(form.screens),
+        ...linesToItems(customScreens)
+      ])
     };
   }
 
@@ -442,10 +484,6 @@ export default function Home() {
     }
   }
 
-  const selectedPreset = APP_IDEA_PRESETS.find(
-    (item) => item.title === selectedPresetTitle
-  );
-
   return (
     <main className="min-h-screen bg-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -478,216 +516,343 @@ export default function Home() {
           className="grid gap-6 rounded-md border border-line bg-mist p-4 sm:p-6 lg:grid-cols-[1.05fr_0.95fr]"
         >
           <section className="space-y-6">
-            <div className="rounded-md border border-blue-100 bg-white p-4">
-              <h2 className="text-base font-bold text-ink">
-                1. まず、作りたいものに近いものを選んでください
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                技術名が分からなくても大丈夫です。選んだ内容に合わせて、おすすめの機能・画面・保存方式を自動で入れます。
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {APP_IDEA_PRESETS.map((preset) => (
-                  <OptionCard
-                    key={preset.title}
-                    title={preset.title}
-                    description={preset.description}
-                    selected={selectedPresetTitle === preset.title}
-                    onClick={() => applyPreset(preset.title)}
-                  />
-                ))}
+            <div className="rounded-md border border-line bg-white p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-ink">入力モード</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    途中で切り替えても入力内容は引き継がれます。
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 rounded-md border border-line bg-slate-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("beginner")}
+                    className={`rounded px-4 py-2 text-sm font-semibold transition ${
+                      inputMode === "beginner"
+                        ? "bg-blue-700 text-white"
+                        : "text-slate-700 hover:bg-white"
+                    }`}
+                  >
+                    初心者向け
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode("advanced")}
+                    className={`rounded px-4 py-2 text-sm font-semibold transition ${
+                      inputMode === "advanced"
+                        ? "bg-blue-700 text-white"
+                        : "text-slate-700 hover:bg-white"
+                    }`}
+                  >
+                    詳細入力
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-5 rounded-md border border-line bg-white p-4">
-              <h2 className="text-base font-bold text-ink">
-                2. アプリの内容を入力してください
-              </h2>
+            {inputMode === "beginner" ? (
+              <>
+                <div className="rounded-md border border-blue-100 bg-white p-4">
+                  <h2 className="text-base font-bold text-ink">
+                    1. まず、作りたいものに近いものを選んでください
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    技術名が分からなくても大丈夫です。選んだ内容に合わせて、おすすめの機能・画面・保存方式を自動で入れます。
+                  </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {APP_IDEA_PRESETS.map((preset) => (
+                      <OptionCard
+                        key={preset.title}
+                        title={preset.title}
+                        description={preset.description}
+                        selected={selectedPresetTitle === preset.title}
+                        onClick={() => applyPreset(preset.title)}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-ink">
-                  アプリ名
-                </span>
-                <input
-                  value={form.appName}
-                  onChange={(event) =>
-                    updateForm("appName", event.target.value)
-                  }
-                  placeholder="例：シンプル家計簿、読書記録アプリ、学習管理アプリ"
-                  className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
+                <div className="space-y-5 rounded-md border border-line bg-white p-4">
+                  <h2 className="text-base font-bold text-ink">
+                    2. アプリの内容を入力してください
+                  </h2>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-ink">
-                  どんなことができるアプリにしたいですか？
-                </span>
-                <textarea
-                  value={form.appIdea}
-                  onChange={(event) =>
-                    updateForm("appIdea", event.target.value)
-                  }
-                  placeholder="例：毎日の支出を記録し、月ごとの合計やカテゴリ別の支出を見返せる家計簿アプリを作りたい。"
-                  rows={5}
-                  className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-ink">
+                      アプリ名
+                    </span>
+                    <input
+                      value={form.appName}
+                      onChange={(event) =>
+                        updateForm("appName", event.target.value)
+                      }
+                      placeholder="例：シンプル家計簿、読書記録アプリ、学習管理アプリ"
+                      className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </label>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-ink">
-                  誰が使う想定ですか？
-                </span>
-                <input
-                  value={form.targetUser}
-                  onChange={(event) =>
-                    updateForm("targetUser", event.target.value)
-                  }
-                  placeholder={selectedPreset?.targetUserHint ?? "例：自分、学生、会社員、小さなお店"}
-                  className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
-            </div>
-
-            <div className="space-y-6 rounded-md border border-line bg-white p-4">
-              <h2 className="text-base font-bold text-ink">
-                3. 必要そうなものを選んでください
-              </h2>
-
-              <CheckboxGroup
-                title="必要機能"
-                helper="最初から全部入れる必要はありません。迷ったら、すでに選ばれている項目のままで大丈夫です。"
-                options={featureOptions}
-                value={form.features}
-                onChange={(value) => updateForm("features", value)}
-              />
-
-              <div className="rounded-md bg-slate-50 p-3">
-                <label className="block">
-                  <span className="mb-2 block text-xs font-semibold text-slate-700">
-                    追加したい機能があれば入力
-                  </span>
-                  <textarea
-                    value={customFeatures}
-                    onChange={(event) => setCustomFeatures(event.target.value)}
-                    placeholder="例：月ごとの合計、タグ管理、印刷"
-                    rows={3}
-                    className="w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  <TextAreaField
+                    label="どんなことができるアプリにしたいですか？"
+                    value={form.appIdea}
+                    onChange={(value) => updateForm("appIdea", value)}
+                    placeholder="例：毎日の支出を記録し、月ごとの合計やカテゴリ別の支出を見返せる家計簿アプリを作りたい。"
+                    rows={5}
                   />
-                </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    appendCustomItems("features", customFeatures, () =>
-                      setCustomFeatures("")
-                    )
-                  }
-                  className="mt-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  機能リストに追加
-                </button>
-              </div>
 
-              <CheckboxGroup
-                title="画面構成"
-                helper="ユーザーが実際に見る画面を選びます。分からない場合は、おすすめのままで進めてください。"
-                options={screenOptions}
-                value={form.screens}
-                onChange={(value) => updateForm("screens", value)}
-              />
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-ink">
+                      誰が使う想定ですか？
+                    </span>
+                    <input
+                      value={form.targetUser}
+                      onChange={(event) =>
+                        updateForm("targetUser", event.target.value)
+                      }
+                      placeholder={
+                        selectedPreset?.targetUserHint ??
+                        "例：自分、学生、会社員、小さなお店"
+                      }
+                      className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </label>
+                </div>
 
-              <div className="rounded-md bg-slate-50 p-3">
-                <label className="block">
-                  <span className="mb-2 block text-xs font-semibold text-slate-700">
-                    追加したい画面があれば入力
-                  </span>
-                  <textarea
-                    value={customScreens}
-                    onChange={(event) => setCustomScreens(event.target.value)}
-                    placeholder="例：月別レポート画面、プロフィール画面"
-                    rows={3}
-                    className="w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                <div className="space-y-6 rounded-md border border-line bg-white p-4">
+                  <h2 className="text-base font-bold text-ink">
+                    3. 必要そうなものを選んでください
+                  </h2>
+
+                  <CheckboxGroup
+                    title="必要機能"
+                    helper="最初から全部入れる必要はありません。迷ったら、すでに選ばれている項目のままで大丈夫です。"
+                    options={featureOptions}
+                    value={form.features}
+                    onChange={(value) => updateForm("features", value)}
                   />
-                </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    appendCustomItems("screens", customScreens, () =>
-                      setCustomScreens("")
-                    )
-                  }
-                  className="mt-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  画面リストに追加
-                </button>
-              </div>
-            </div>
 
-            <details className="rounded-md border border-line bg-white p-4">
-              <summary className="cursor-pointer text-sm font-bold text-ink">
-                詳細設定：技術構成を自分で変更する
-              </summary>
-              <p className="mt-2 text-xs leading-5 text-slate-600">
-                初心者の方はこのままで問題ありません。Codexに渡す技術指定を細かく変えたい場合だけ変更してください。
-              </p>
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <SelectField
-                  label="開発環境"
-                  value={form.developmentStack}
-                  options={DEVELOPMENT_STACKS}
-                  onChange={(value) =>
-                    updateForm(
-                      "developmentStack",
-                      value as ProjectPlanInput["developmentStack"]
-                    )
-                  }
-                />
-                <SelectField
-                  label="使用するAI"
-                  value={form.aiOption}
-                  options={AI_OPTIONS}
-                  onChange={(value) =>
-                    updateForm(
-                      "aiOption",
-                      value as ProjectPlanInput["aiOption"]
-                    )
-                  }
-                />
-                <SelectField
-                  label="保存方式"
-                  value={form.storageOption}
-                  options={STORAGE_OPTIONS}
-                  onChange={(value) =>
-                    updateForm(
-                      "storageOption",
-                      value as ProjectPlanInput["storageOption"]
-                    )
-                  }
-                />
+                  <div className="rounded-md bg-slate-50 p-3">
+                    <TextAreaField
+                      label="追加したい機能があれば入力"
+                      value={customFeatures}
+                      onChange={setCustomFeatures}
+                      placeholder="例：月ごとの合計、タグ管理、印刷"
+                      rows={3}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        appendCustomItems("features", customFeatures, () =>
+                          setCustomFeatures("")
+                        )
+                      }
+                      className="mt-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      機能リストに追加
+                    </button>
+                  </div>
+
+                  <CheckboxGroup
+                    title="画面構成"
+                    helper="ユーザーが実際に見る画面を選びます。分からない場合は、おすすめのままで進めてください。"
+                    options={screenOptions}
+                    value={form.screens}
+                    onChange={(value) => updateForm("screens", value)}
+                  />
+
+                  <div className="rounded-md bg-slate-50 p-3">
+                    <TextAreaField
+                      label="追加したい画面があれば入力"
+                      value={customScreens}
+                      onChange={setCustomScreens}
+                      placeholder="例：月別レポート画面、プロフィール画面"
+                      rows={3}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        appendCustomItems("screens", customScreens, () =>
+                          setCustomScreens("")
+                        )
+                      }
+                      className="mt-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      画面リストに追加
+                    </button>
+                  </div>
+                </div>
+
+                <details className="rounded-md border border-line bg-white p-4">
+                  <summary className="cursor-pointer text-sm font-bold text-ink">
+                    詳細設定：技術構成を自分で変更する
+                  </summary>
+                  <p className="mt-2 text-xs leading-5 text-slate-600">
+                    初心者の方はこのままで問題ありません。細かく変えたい場合だけ変更してください。
+                  </p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <SelectField
+                      label="アプリの種類"
+                      value={form.appType}
+                      options={APP_TYPES}
+                      onChange={(value) =>
+                        updateForm(
+                          "appType",
+                          value as ProjectPlanInput["appType"]
+                        )
+                      }
+                    />
+                    <SelectField
+                      label="開発環境"
+                      value={form.developmentStack}
+                      options={DEVELOPMENT_STACKS}
+                      onChange={(value) =>
+                        updateForm(
+                          "developmentStack",
+                          value as ProjectPlanInput["developmentStack"]
+                        )
+                      }
+                    />
+                    <SelectField
+                      label="使用するAI"
+                      value={form.aiOption}
+                      options={AI_OPTIONS}
+                      onChange={(value) =>
+                        updateForm(
+                          "aiOption",
+                          value as ProjectPlanInput["aiOption"]
+                        )
+                      }
+                    />
+                    <SelectField
+                      label="保存方式"
+                      value={form.storageOption}
+                      options={STORAGE_OPTIONS}
+                      onChange={(value) =>
+                        updateForm(
+                          "storageOption",
+                          value as ProjectPlanInput["storageOption"]
+                        )
+                      }
+                    />
+                  </div>
+                </details>
+              </>
+            ) : (
+              <div className="space-y-5 rounded-md border border-line bg-white p-4">
+                <div>
+                  <h2 className="text-base font-bold text-ink">詳細入力</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    Codexに渡す内容を直接調整できます。初心者向けモードで作った内容もここで編集できます。
+                  </p>
+                </div>
+
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-ink">
-                    アプリの種類
+                    アプリ名
                   </span>
                   <input
-                    value={form.appType}
-                    readOnly
-                    className="w-full rounded-md border border-line bg-slate-50 px-3 py-3 text-sm text-slate-700"
+                    value={form.appName}
+                    onChange={(event) =>
+                      updateForm("appName", event.target.value)
+                    }
+                    placeholder="例：シンプル家計簿"
+                    className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </label>
-              </div>
-            </details>
 
-            <label className="block rounded-md border border-line bg-white p-4">
-              <span className="mb-2 block text-sm font-semibold text-ink">
-                追加したい注意点
-              </span>
-              <textarea
-                value={form.extraNotes}
-                onChange={(event) =>
-                  updateForm("extraNotes", event.target.value)
-                }
-                rows={5}
-                className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
+                <TextAreaField
+                  label="作りたいアプリの概要"
+                  value={form.appIdea}
+                  onChange={(value) => updateForm("appIdea", value)}
+                  placeholder="例：毎日の支出を記録し、月ごとの支出合計やカテゴリ別の支出を確認できる家計簿アプリを作りたい。"
+                  rows={5}
+                />
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-ink">
+                    対象ユーザー
+                  </span>
+                  <input
+                    value={form.targetUser}
+                    onChange={(event) =>
+                      updateForm("targetUser", event.target.value)
+                    }
+                    placeholder="例：個人、学生、会社員、家庭で家計管理をしたい人"
+                    className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SelectField
+                    label="アプリの種類"
+                    value={form.appType}
+                    options={APP_TYPES}
+                    onChange={(value) =>
+                      updateForm(
+                        "appType",
+                        value as ProjectPlanInput["appType"]
+                      )
+                    }
+                  />
+                  <SelectField
+                    label="開発環境"
+                    value={form.developmentStack}
+                    options={DEVELOPMENT_STACKS}
+                    onChange={(value) =>
+                      updateForm(
+                        "developmentStack",
+                        value as ProjectPlanInput["developmentStack"]
+                      )
+                    }
+                  />
+                  <SelectField
+                    label="使用するAI"
+                    value={form.aiOption}
+                    options={AI_OPTIONS}
+                    onChange={(value) =>
+                      updateForm(
+                        "aiOption",
+                        value as ProjectPlanInput["aiOption"]
+                      )
+                    }
+                  />
+                  <SelectField
+                    label="保存方式"
+                    value={form.storageOption}
+                    options={STORAGE_OPTIONS}
+                    onChange={(value) =>
+                      updateForm(
+                        "storageOption",
+                        value as ProjectPlanInput["storageOption"]
+                      )
+                    }
+                  />
+                </div>
+
+                <TextAreaField
+                  label="必要機能"
+                  value={form.features}
+                  onChange={(value) => updateForm("features", value)}
+                  placeholder={"- データ登録\n- 一覧表示\n- 編集\n- 削除\n- 検索"}
+                  rows={7}
+                />
+
+                <TextAreaField
+                  label="画面構成"
+                  value={form.screens}
+                  onChange={(value) => updateForm("screens", value)}
+                  placeholder={"- ホーム\n- 入力画面\n- 一覧画面\n- 詳細画面\n- 設定画面"}
+                  rows={6}
+                />
+              </div>
+            )}
+
+            <TextAreaField
+              label="追加したい注意点"
+              value={form.extraNotes ?? ""}
+              onChange={(value) => updateForm("extraNotes", value)}
+              rows={5}
+            />
 
             <button
               type="submit"
