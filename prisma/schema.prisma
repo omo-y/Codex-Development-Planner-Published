@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ProjectPlan {
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  appName          String
+  appIdea          String
+  targetUser       String
+  appType          String
+  developmentStack String
+  aiOption         String
+  storageOption    String
+  features         String
+  screens          String
+  extraNotes       String?
+  generatedPrompt  String
+
+  // SaaS化する場合は、ここに userId を追加し、ユーザーごとの保存に対応する。
+}
