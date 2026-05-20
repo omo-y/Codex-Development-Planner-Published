@@ -32,7 +32,7 @@ export async function suggestScreens(
 
   return baseScreens.length > 0
     ? baseScreens
-    : ["ダッシュボード", "入力画面", "一覧画面"];
+    : ["ホーム", "入力画面", "一覧画面"];
 }
 
 export async function suggestDatabaseModels(): Promise<

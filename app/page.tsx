@@ -3,24 +3,134 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   AI_OPTIONS,
-  APP_TYPES,
+  APP_IDEA_PRESETS,
+  BEGINNER_NOTES,
+  COMMON_FEATURES,
+  COMMON_SCREENS,
   DEVELOPMENT_STACKS,
   STORAGE_OPTIONS
 } from "@/lib/templates";
 import type { ProjectPlanInput, ProjectPlanResponse } from "@/types/project";
 
+const defaultPreset = APP_IDEA_PRESETS[0];
+
 const initialForm: ProjectPlanInput = {
   appName: "",
   appIdea: "",
   targetUser: "",
-  appType: "Webアプリ",
-  developmentStack: "Next.js + TypeScript + Tailwind CSS",
+  appType: defaultPreset.appType,
+  developmentStack: defaultPreset.developmentStack,
   aiOption: "AIなし",
-  storageOption: "SQLite + Prisma",
-  features: "",
-  screens: "",
-  extraNotes: ""
+  storageOption: defaultPreset.storageOption,
+  features: defaultPreset.featureSuggestions.join("\n"),
+  screens: defaultPreset.screenSuggestions.join("\n"),
+  extraNotes: BEGINNER_NOTES.join("\n")
 };
+
+function linesToItems(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function itemsToLines(items: string[]) {
+  return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean))).join(
+    "\n"
+  );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
+type OptionCardProps = {
+  title: string;
+  description: string;
+  selected: boolean;
+  onClick: () => void;
+};
+
+function OptionCard({ title, description, selected, onClick }: OptionCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-md border p-4 text-left transition ${
+        selected
+          ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+          : "border-line bg-white hover:border-blue-300 hover:bg-slate-50"
+      }`}
+    >
+      <span className="block text-sm font-bold text-ink">{title}</span>
+      <span className="mt-1 block text-xs leading-5 text-slate-600">
+        {description}
+      </span>
+    </button>
+  );
+}
+
+type CheckboxGroupProps = {
+  title: string;
+  helper: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+};
+
+function CheckboxGroup({
+  title,
+  helper,
+  options,
+  value,
+  onChange
+}: CheckboxGroupProps) {
+  const selectedItems = linesToItems(value);
+  const selectedSet = new Set(selectedItems);
+
+  function toggle(option: string) {
+    const nextItems = selectedSet.has(option)
+      ? selectedItems.filter((item) => item !== option)
+      : [...selectedItems, option];
+
+    onChange(itemsToLines(nextItems));
+  }
+
+  return (
+    <div>
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+        <p className="mt-1 text-xs leading-5 text-slate-600">{helper}</p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {options.map((option) => (
+          <label
+            key={option}
+            className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+              selectedSet.has(option)
+                ? "border-blue-400 bg-blue-50 text-blue-900"
+                : "border-line bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={selectedSet.has(option)}
+              onChange={() => toggle(option)}
+              className="h-4 w-4 rounded border-line text-blue-700"
+            />
+            {option}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 type SelectFieldProps = {
   label: string;
@@ -48,18 +158,13 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
   );
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
-
 export default function Home() {
   const [form, setForm] = useState<ProjectPlanInput>(initialForm);
+  const [selectedPresetTitle, setSelectedPresetTitle] = useState(
+    defaultPreset.title
+  );
+  const [customFeatures, setCustomFeatures] = useState("");
+  const [customScreens, setCustomScreens] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [history, setHistory] = useState<ProjectPlanResponse[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -67,10 +172,27 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
-  const canCopy = useMemo(
-    () => generatedPrompt.trim().length > 0,
-    [generatedPrompt]
-  );
+  const featureOptions = useMemo(() => {
+    const preset = APP_IDEA_PRESETS.find(
+      (item) => item.title === selectedPresetTitle
+    );
+    return itemsToLines([
+      ...(preset?.featureSuggestions ?? []),
+      ...COMMON_FEATURES
+    ]).split("\n");
+  }, [selectedPresetTitle]);
+
+  const screenOptions = useMemo(() => {
+    const preset = APP_IDEA_PRESETS.find(
+      (item) => item.title === selectedPresetTitle
+    );
+    return itemsToLines([
+      ...(preset?.screenSuggestions ?? []),
+      ...COMMON_SCREENS
+    ]).split("\n");
+  }, [selectedPresetTitle]);
+
+  const canCopy = generatedPrompt.trim().length > 0;
 
   async function loadHistory() {
     setIsLoadingHistory(true);
@@ -149,6 +271,44 @@ export default function Home() {
     }));
   }
 
+  function applyPreset(title: string) {
+    const preset = APP_IDEA_PRESETS.find((item) => item.title === title);
+
+    if (!preset) {
+      return;
+    }
+
+    setSelectedPresetTitle(preset.title);
+    setForm((current) => ({
+      ...current,
+      appType: preset.appType,
+      developmentStack: preset.developmentStack,
+      storageOption: preset.storageOption,
+      features: itemsToLines(preset.featureSuggestions),
+      screens: itemsToLines(preset.screenSuggestions)
+    }));
+    setCustomFeatures("");
+    setCustomScreens("");
+  }
+
+  function appendCustomItems(
+    target: "features" | "screens",
+    customValue: string,
+    clear: () => void
+  ) {
+    const customItems = linesToItems(customValue);
+
+    if (customItems.length === 0) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      [target]: itemsToLines([...linesToItems(current[target]), ...customItems])
+    }));
+    clear();
+  }
+
   function restoreHistory(project: ProjectPlanResponse) {
     setForm({
       appName: project.appName,
@@ -162,9 +322,20 @@ export default function Home() {
       screens: project.screens,
       extraNotes: project.extraNotes
     });
+    setSelectedPresetTitle("まだ決まっていない");
+    setCustomFeatures("");
+    setCustomScreens("");
     setGeneratedPrompt(project.generatedPrompt);
     setErrorMessage("");
     setSuccessMessage("履歴から入力内容を復元しました。");
+  }
+
+  function buildSubmitInput(): ProjectPlanInput {
+    return {
+      ...form,
+      features: itemsToLines([...linesToItems(form.features), ...linesToItems(customFeatures)]),
+      screens: itemsToLines([...linesToItems(form.screens), ...linesToItems(customScreens)])
+    };
   }
 
   async function handleGenerate(event: FormEvent<HTMLFormElement>) {
@@ -173,13 +344,15 @@ export default function Home() {
     setSuccessMessage("");
     setIsGenerating(true);
 
+    const submitInput = buildSubmitInput();
+
     try {
       const promptResponse = await fetch("/api/prompt", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify(submitInput)
       });
       const promptData = (await promptResponse.json()) as {
         generatedPrompt?: string;
@@ -193,6 +366,9 @@ export default function Home() {
       }
 
       setGeneratedPrompt(promptData.generatedPrompt);
+      setForm(submitInput);
+      setCustomFeatures("");
+      setCustomScreens("");
 
       const saveResponse = await fetch("/api/projects", {
         method: "POST",
@@ -200,7 +376,7 @@ export default function Home() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          ...form,
+          ...submitInput,
           generatedPrompt: promptData.generatedPrompt
         })
       });
@@ -266,6 +442,10 @@ export default function Home() {
     }
   }
 
+  const selectedPreset = APP_IDEA_PRESETS.find(
+    (item) => item.title === selectedPresetTitle
+  );
+
   return (
     <main className="min-h-screen bg-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
@@ -297,114 +477,205 @@ export default function Home() {
           onSubmit={handleGenerate}
           className="grid gap-6 rounded-md border border-line bg-mist p-4 sm:p-6 lg:grid-cols-[1.05fr_0.95fr]"
         >
-          <section className="space-y-5">
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-ink">
-                アプリ名
-              </span>
-              <input
-                value={form.appName}
-                onChange={(event) => updateForm("appName", event.target.value)}
-                placeholder="例：シンプル家計簿"
-                className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-ink">
-                作りたいアプリの概要
-              </span>
-              <textarea
-                value={form.appIdea}
-                onChange={(event) => updateForm("appIdea", event.target.value)}
-                placeholder="例：毎日の支出を記録し、月ごとの支出合計やカテゴリ別の支出を確認できる家計簿アプリを作りたい。"
-                rows={5}
-                className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-ink">
-                対象ユーザー
-              </span>
-              <input
-                value={form.targetUser}
-                onChange={(event) =>
-                  updateForm("targetUser", event.target.value)
-                }
-                placeholder="例：個人、学生、会社員、家庭で家計管理をしたい人"
-                className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              />
-            </label>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <SelectField
-                label="アプリの種類"
-                value={form.appType}
-                options={APP_TYPES}
-                onChange={(value) =>
-                  updateForm("appType", value as ProjectPlanInput["appType"])
-                }
-              />
-              <SelectField
-                label="開発環境"
-                value={form.developmentStack}
-                options={DEVELOPMENT_STACKS}
-                onChange={(value) =>
-                  updateForm(
-                    "developmentStack",
-                    value as ProjectPlanInput["developmentStack"]
-                  )
-                }
-              />
-              <SelectField
-                label="使用するAI"
-                value={form.aiOption}
-                options={AI_OPTIONS}
-                onChange={(value) =>
-                  updateForm("aiOption", value as ProjectPlanInput["aiOption"])
-                }
-              />
-              <SelectField
-                label="保存方式"
-                value={form.storageOption}
-                options={STORAGE_OPTIONS}
-                onChange={(value) =>
-                  updateForm(
-                    "storageOption",
-                    value as ProjectPlanInput["storageOption"]
-                  )
-                }
-              />
+          <section className="space-y-6">
+            <div className="rounded-md border border-blue-100 bg-white p-4">
+              <h2 className="text-base font-bold text-ink">
+                1. まず、作りたいものに近いものを選んでください
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                技術名が分からなくても大丈夫です。選んだ内容に合わせて、おすすめの機能・画面・保存方式を自動で入れます。
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {APP_IDEA_PRESETS.map((preset) => (
+                  <OptionCard
+                    key={preset.title}
+                    title={preset.title}
+                    description={preset.description}
+                    selected={selectedPresetTitle === preset.title}
+                    onClick={() => applyPreset(preset.title)}
+                  />
+                ))}
+              </div>
             </div>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-ink">
-                必要機能
-              </span>
-              <textarea
+            <div className="space-y-5 rounded-md border border-line bg-white p-4">
+              <h2 className="text-base font-bold text-ink">
+                2. アプリの内容を入力してください
+              </h2>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-ink">
+                  アプリ名
+                </span>
+                <input
+                  value={form.appName}
+                  onChange={(event) =>
+                    updateForm("appName", event.target.value)
+                  }
+                  placeholder="例：シンプル家計簿、読書記録アプリ、学習管理アプリ"
+                  className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-ink">
+                  どんなことができるアプリにしたいですか？
+                </span>
+                <textarea
+                  value={form.appIdea}
+                  onChange={(event) =>
+                    updateForm("appIdea", event.target.value)
+                  }
+                  placeholder="例：毎日の支出を記録し、月ごとの合計やカテゴリ別の支出を見返せる家計簿アプリを作りたい。"
+                  rows={5}
+                  className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-ink">
+                  誰が使う想定ですか？
+                </span>
+                <input
+                  value={form.targetUser}
+                  onChange={(event) =>
+                    updateForm("targetUser", event.target.value)
+                  }
+                  placeholder={selectedPreset?.targetUserHint ?? "例：自分、学生、会社員、小さなお店"}
+                  className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+            </div>
+
+            <div className="space-y-6 rounded-md border border-line bg-white p-4">
+              <h2 className="text-base font-bold text-ink">
+                3. 必要そうなものを選んでください
+              </h2>
+
+              <CheckboxGroup
+                title="必要機能"
+                helper="最初から全部入れる必要はありません。迷ったら、すでに選ばれている項目のままで大丈夫です。"
+                options={featureOptions}
                 value={form.features}
-                onChange={(event) => updateForm("features", event.target.value)}
-                placeholder={"- データ登録\n- 一覧表示\n- 編集\n- 削除\n- 検索\n- グラフ表示\n- 履歴保存\n- Markdownコピー"}
-                rows={6}
-                className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(value) => updateForm("features", value)}
               />
-            </label>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-ink">
-                画面構成
-              </span>
-              <textarea
+              <div className="rounded-md bg-slate-50 p-3">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold text-slate-700">
+                    追加したい機能があれば入力
+                  </span>
+                  <textarea
+                    value={customFeatures}
+                    onChange={(event) => setCustomFeatures(event.target.value)}
+                    placeholder="例：月ごとの合計、タグ管理、印刷"
+                    rows={3}
+                    className="w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    appendCustomItems("features", customFeatures, () =>
+                      setCustomFeatures("")
+                    )
+                  }
+                  className="mt-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  機能リストに追加
+                </button>
+              </div>
+
+              <CheckboxGroup
+                title="画面構成"
+                helper="ユーザーが実際に見る画面を選びます。分からない場合は、おすすめのままで進めてください。"
+                options={screenOptions}
                 value={form.screens}
-                onChange={(event) => updateForm("screens", event.target.value)}
-                placeholder={"- ダッシュボード\n- 入力画面\n- 一覧画面\n- 詳細画面\n- 設定画面"}
-                rows={5}
-                className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                onChange={(value) => updateForm("screens", value)}
               />
-            </label>
 
-            <label className="block">
+              <div className="rounded-md bg-slate-50 p-3">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold text-slate-700">
+                    追加したい画面があれば入力
+                  </span>
+                  <textarea
+                    value={customScreens}
+                    onChange={(event) => setCustomScreens(event.target.value)}
+                    placeholder="例：月別レポート画面、プロフィール画面"
+                    rows={3}
+                    className="w-full resize-y rounded-md border border-line bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    appendCustomItems("screens", customScreens, () =>
+                      setCustomScreens("")
+                    )
+                  }
+                  className="mt-2 rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  画面リストに追加
+                </button>
+              </div>
+            </div>
+
+            <details className="rounded-md border border-line bg-white p-4">
+              <summary className="cursor-pointer text-sm font-bold text-ink">
+                詳細設定：技術構成を自分で変更する
+              </summary>
+              <p className="mt-2 text-xs leading-5 text-slate-600">
+                初心者の方はこのままで問題ありません。Codexに渡す技術指定を細かく変えたい場合だけ変更してください。
+              </p>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <SelectField
+                  label="開発環境"
+                  value={form.developmentStack}
+                  options={DEVELOPMENT_STACKS}
+                  onChange={(value) =>
+                    updateForm(
+                      "developmentStack",
+                      value as ProjectPlanInput["developmentStack"]
+                    )
+                  }
+                />
+                <SelectField
+                  label="使用するAI"
+                  value={form.aiOption}
+                  options={AI_OPTIONS}
+                  onChange={(value) =>
+                    updateForm(
+                      "aiOption",
+                      value as ProjectPlanInput["aiOption"]
+                    )
+                  }
+                />
+                <SelectField
+                  label="保存方式"
+                  value={form.storageOption}
+                  options={STORAGE_OPTIONS}
+                  onChange={(value) =>
+                    updateForm(
+                      "storageOption",
+                      value as ProjectPlanInput["storageOption"]
+                    )
+                  }
+                />
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-ink">
+                    アプリの種類
+                  </span>
+                  <input
+                    value={form.appType}
+                    readOnly
+                    className="w-full rounded-md border border-line bg-slate-50 px-3 py-3 text-sm text-slate-700"
+                  />
+                </label>
+              </div>
+            </details>
+
+            <label className="block rounded-md border border-line bg-white p-4">
               <span className="mb-2 block text-sm font-semibold text-ink">
                 追加したい注意点
               </span>
@@ -413,8 +684,7 @@ export default function Home() {
                 onChange={(event) =>
                   updateForm("extraNotes", event.target.value)
                 }
-                placeholder="初心者でも分かりやすいコードにしてください。READMEに起動手順を書いてください。TypeScriptエラーが出ないようにしてください。"
-                rows={4}
+                rows={5}
                 className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </label>
