@@ -164,6 +164,7 @@ function SelectField({ label, value, options, onChange }: SelectFieldProps) {
 type TextAreaFieldProps = {
   label: string;
   value: string;
+  helper?: string;
   placeholder?: string;
   rows?: number;
   onChange: (value: string) => void;
@@ -172,6 +173,7 @@ type TextAreaFieldProps = {
 function TextAreaField({
   label,
   value,
+  helper,
   placeholder,
   rows = 5,
   onChange
@@ -186,6 +188,11 @@ function TextAreaField({
         rows={rows}
         className="w-full resize-y rounded-md border border-line bg-white px-3 py-3 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
       />
+      {helper ? (
+        <span className="mt-2 block text-xs leading-5 text-slate-600">
+          {helper}
+        </span>
+      ) : null}
     </label>
   );
 }
@@ -575,7 +582,7 @@ export default function Home() {
 
                 <div className="space-y-5 rounded-md border border-line bg-white p-4">
                   <h2 className="text-base font-bold text-ink">
-                    2. アプリの内容を入力してください
+                    2. 作りたいアプリを具体化してください
                   </h2>
 
                   <label className="block">
@@ -593,16 +600,17 @@ export default function Home() {
                   </label>
 
                   <TextAreaField
-                    label="どんなことができるアプリにしたいですか？"
+                    label="このアプリで実現したいこと・主な機能"
                     value={form.appIdea}
                     onChange={(value) => updateForm("appIdea", value)}
+                    helper="選んだ分類をもとに、具体的にできることを書いてください。例：毎日の支出を登録し、月別合計やカテゴリ別の支出を確認できる。"
                     placeholder="例：毎日の支出を記録し、月ごとの合計やカテゴリ別の支出を見返せる家計簿アプリを作りたい。"
                     rows={5}
                   />
 
                   <label className="block">
                     <span className="mb-2 block text-sm font-semibold text-ink">
-                      誰が使う想定ですか？
+                      使う人・利用シーン
                     </span>
                     <input
                       value={form.targetUser}
@@ -615,6 +623,9 @@ export default function Home() {
                       }
                       className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
+                    <span className="mt-2 block text-xs leading-5 text-slate-600">
+                      誰が、どんな場面で使うかを書いてください。例：毎月の支出を見直したい個人・学生・会社員。
+                    </span>
                   </label>
                 </div>
 
@@ -761,16 +772,17 @@ export default function Home() {
                 </label>
 
                 <TextAreaField
-                  label="作りたいアプリの概要"
+                  label="このアプリで実現したいこと・主な機能"
                   value={form.appIdea}
                   onChange={(value) => updateForm("appIdea", value)}
+                  helper="選んだ分類をもとに、具体的にできることを書いてください。例：毎日の支出を登録し、月別合計やカテゴリ別の支出を確認できる。"
                   placeholder="例：毎日の支出を記録し、月ごとの支出合計やカテゴリ別の支出を確認できる家計簿アプリを作りたい。"
                   rows={5}
                 />
 
                 <label className="block">
                   <span className="mb-2 block text-sm font-semibold text-ink">
-                    対象ユーザー
+                    使う人・利用シーン
                   </span>
                   <input
                     value={form.targetUser}
@@ -780,6 +792,9 @@ export default function Home() {
                     placeholder="例：個人、学生、会社員、家庭で家計管理をしたい人"
                     className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
+                  <span className="mt-2 block text-xs leading-5 text-slate-600">
+                    誰が、どんな場面で使うかを書いてください。例：毎月の支出を見直したい個人・学生・会社員。
+                  </span>
                 </label>
 
                 <div className="grid gap-4 sm:grid-cols-2">

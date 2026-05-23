@@ -10,11 +10,13 @@ export function validateProjectPlanInput(input: ProjectPlanInput): string[] {
   }
 
   if (input.appIdea.trim().length < 10) {
-    errors.push("アプリの概要は10文字以上で入力してください。");
+    errors.push(
+      "このアプリで実現したいこと・主な機能は10文字以上で入力してください。"
+    );
   }
 
   if (!input.targetUser.trim()) {
-    errors.push("対象ユーザーを入力してください。");
+    errors.push("使う人・利用シーンを入力してください。");
   }
 
   return errors;
@@ -34,13 +36,13 @@ export function buildCodexPrompt(input: ProjectPlanInput): string {
   return `あなたは優秀なフルスタックエンジニアです。
 ${input.developmentStack} を使って、「${input.appName.trim()}」を作成してください。
 
-# アプリの目的
+# このアプリで実現したいこと・主な機能
 ${input.appIdea.trim()}
 
-# 対象ユーザー
+# 使う人・利用シーン
 ${input.targetUser.trim()}
 
-# アプリの種類
+# 作りたいものに近いもの
 ${input.appType}
 
 # 技術構成
@@ -48,7 +50,7 @@ ${input.appType}
 - 使用するAI：${input.aiOption}
 - 保存方式：${input.storageOption}
 
-# 必要機能
+# 選択・追加された機能
 ${toMarkdownList(input.features)}
 
 # 画面構成
