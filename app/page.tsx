@@ -749,6 +749,22 @@ export default function Home() {
               <p className="mt-3 text-xs leading-5 text-slate-600">
                 生成結果は完成した仕様書ではなく、Codexに最初の実装を依頼するための下書きです。実装後に気になる点があれば、履歴から復元して条件を追加してください。
               </p>
+              <div className="mt-4 rounded-md bg-blue-50 p-3">
+                <h4 className="text-sm font-bold text-ink">
+                  Codexアプリが初めての方へ
+                </h4>
+                <p className="mt-2 text-xs leading-5 text-slate-700">
+                  このアプリで作るものは、Codexに渡すための開発指示書です。Codexアプリでは、その指示書を使って実際のファイル作成やコード編集を進めます。
+                </p>
+                <a
+                  href="https://openai.com/ja-JP/index/introducing-the-codex-app/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex rounded-md bg-blue-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-800"
+                >
+                  Codexアプリの公式紹介を見る
+                </a>
+              </div>
             </div>
           </section>
         </form>
