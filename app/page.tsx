@@ -736,6 +736,20 @@ export default function Home() {
               placeholder="ここにCodex用プロンプトが表示されます。"
               className="min-h-[480px] flex-1 resize-y rounded-md border border-line bg-white p-4 text-sm leading-6 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
+            <div className="mt-4 rounded-md border border-blue-100 bg-white p-4">
+              <h3 className="text-sm font-bold text-ink">
+                生成結果の使い方
+              </h3>
+              <ol className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                <li>1. 内容を確認し、足りない条件があれば左側の入力欄を修正します。</li>
+                <li>2. 「コピー」を押して、生成されたプロンプトをコピーします。</li>
+                <li>3. Codexアプリで新しい作業を開き、そのまま貼り付けます。</li>
+                <li>4. Codexの返答を見て、必要なら追加条件をもう一度入力して再生成します。</li>
+              </ol>
+              <p className="mt-3 text-xs leading-5 text-slate-600">
+                生成結果は完成した仕様書ではなく、Codexに最初の実装を依頼するための下書きです。実装後に気になる点があれば、履歴から復元して条件を追加してください。
+              </p>
+            </div>
           </section>
         </form>
 
