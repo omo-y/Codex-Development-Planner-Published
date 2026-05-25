@@ -215,9 +215,10 @@ export default function Home() {
     );
     return itemsToLines([
       ...(preset?.featureSuggestions ?? []),
-      ...COMMON_FEATURES
+      ...COMMON_FEATURES,
+      ...linesToItems(form.features)
     ]).split("\n");
-  }, [selectedPresetTitle]);
+  }, [form.features, selectedPresetTitle]);
 
   const screenOptions = useMemo(() => {
     const preset = APP_IDEA_PRESETS.find(
@@ -225,9 +226,10 @@ export default function Home() {
     );
     return itemsToLines([
       ...(preset?.screenSuggestions ?? []),
-      ...COMMON_SCREENS
+      ...COMMON_SCREENS,
+      ...linesToItems(form.screens)
     ]).split("\n");
-  }, [selectedPresetTitle]);
+  }, [form.screens, selectedPresetTitle]);
 
   const selectedPreset = APP_IDEA_PRESETS.find(
     (item) => item.title === selectedPresetTitle
@@ -621,6 +623,9 @@ export default function Home() {
                 >
                   機能リストに追加
                 </button>
+                <p className="mt-2 text-xs leading-5 text-slate-600">
+                  追加すると、上の必要機能リストにチェック済み項目として表示されます。
+                </p>
               </div>
 
               <CheckboxGroup
@@ -650,6 +655,9 @@ export default function Home() {
                 >
                   画面リストに追加
                 </button>
+                <p className="mt-2 text-xs leading-5 text-slate-600">
+                  追加すると、上の画面構成リストにチェック済み項目として表示されます。
+                </p>
               </div>
             </div>
 
