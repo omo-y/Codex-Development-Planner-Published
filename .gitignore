@@ -6,3 +6,4 @@ tsconfig.tsbuildinfo
 .npm-cache
 prisma/*.db
 prisma/*.db-journal
+docs/codex-development-planner-introduction.md
