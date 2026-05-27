@@ -18,7 +18,7 @@
 - TypeScript
 - React
 - Tailwind CSS
-- SQLite
+- Supabase Postgres
 - Prisma
 
 ## 重要なファイル
@@ -31,7 +31,7 @@
 - `lib/templates.ts`: 選択肢、プリセット、補足テンプレート。
 - `lib/aiPlanner.ts`: 将来のOllama + Qwen3連携用のモック実装。
 - `types/project.ts`: プロジェクト案とAI補助処理の型定義。
-- `prisma/schema.prisma`: SQLite + PrismaのDB定義。
+- `prisma/schema.prisma`: Supabase Postgres + PrismaのDB定義。
 
 ## UI方針
 
@@ -41,6 +41,7 @@
 - 将来、詳細入力モードを追加する場合も、既存の初心者向けフローを壊さない。
 - 生成結果はコピーしやすい textarea で表示する。
 - エラー文は日本語で分かりやすく表示する。
+- 初期リリースには認証がないため、履歴が全ユーザーで共有されることを画面とREADMEに明記する。
 
 ## エラー処理
 
@@ -52,17 +53,19 @@
 
 ## Prisma
 
-Prisma CLIを使う場合は `.env` に以下が必要です。
+Prisma CLIを使う場合は `.env` にSupabase Postgresの接続文字列が必要です。
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 ```
 
 Next.js実行時は `.env.local` も使います。
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 ```
+
+初期リリースでは認証機能を入れない。次バージョンでSupabase Authなどを使い、`ProjectPlan` に `userId` を追加してユーザー別履歴保存に対応する想定。
 
 ## 検証コマンド
 
@@ -78,11 +81,11 @@ DB関連を変更した場合は以下も確認してください。
 
 ```bash
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 ```
 
 ## Git運用
 
 - コミットはユーザーが行う。
 - 作業が一区切りしたら、英語のConventional Commit形式でコミットメッセージ案を提示する。
-- 例: `refactor: ship beginner-only initial planner flow`
+- 例: `feat: migrate history storage to supabase postgres`

@@ -503,6 +503,9 @@ export default function Home() {
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700">
             作りたいアプリのアイデアを入力すると、要件・機能・画面構成・開発環境を整理し、Codexアプリに貼り付けられる開発プロンプトを生成します。
           </p>
+          <div className="mt-4 max-w-3xl rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+            初期リリースには認証機能がありません。Vercelなどで公開した場合、生成履歴はアクセスした全ユーザーで共有されます。個人情報、未公開アイデア、機密情報は入力しないでください。次バージョンでユーザー認証とユーザー別履歴保存を追加予定です。
+          </div>
         </header>
 
         {(errorMessage || successMessage) && (

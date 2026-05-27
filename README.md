@@ -4,6 +4,14 @@ Codex開発プランナーは、作りたいアプリのアイデアを整理し
 
 このアプリはコードを直接生成するものではありません。アプリの目的、対象ユーザー、機能、画面構成、開発環境、保存方式を整理し、Codexへ渡す指示書を作るための基本機能版です。
 
+## 初期リリースの注意
+
+この初期リリースには認証機能がありません。
+
+Vercelなどで公開した場合、生成履歴はアクセスした全ユーザーで共有されます。個人情報、未公開アイデア、機密情報は入力しないでください。
+
+次のバージョンで、ユーザー認証とユーザー別の履歴保存を追加する予定です。
+
 ## 入力方式
 
 初期リリースでは、初心者向けの入力方式だけに絞っています。技術名や画面構成が分からない人でも使いやすいように、以下の流れで入力します。
@@ -45,23 +53,32 @@ Codex開発プランナーは、作りたいアプリのアイデアを整理し
 - TypeScript
 - React
 - Tailwind CSS
-- SQLite
+- Supabase Postgres
 - Prisma
 
 ## 必要なもの
 
 - Node.js
 - npm
+- Supabaseプロジェクト
+- Vercelアカウント
 
 ## .env.local の作成
 
 `.env.local.example` を参考に、プロジェクトルートに `.env.local` を作成してください。
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 ```
 
-Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます。`npx prisma migrate dev` で `DATABASE_URL` が見つからない場合は、同じ内容で `.env` も作成してください。
+Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます。ローカルで `npx prisma migrate dev` を使う場合は、同じ内容で `.env` も作成してください。
+
+## Supabaseの準備
+
+1. Supabaseで新しいプロジェクトを作成します。
+2. Project Settings からPostgresの接続文字列を確認します。
+3. Prismaで使う `DATABASE_URL` として、Supabase Postgresの接続文字列を `.env.local` と `.env` に設定します。
+4. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
 
 ## インストール手順
 
@@ -77,22 +94,16 @@ Prisma Clientを生成します。
 npx prisma generate
 ```
 
-SQLiteのDBとテーブルを作成します。
+Supabase Postgresにテーブルを作成します。
 
 ```bash
 npx prisma migrate dev --name init
 ```
 
-環境によって `migrate dev` が非対話環境として止まる場合は、既存のマイグレーションを適用します。
+本番環境やVercelでは、既存のマイグレーションを適用します。
 
 ```bash
 npx prisma migrate deploy
-```
-
-SQLiteファイルが存在せず schema engine エラーになる場合は、空の `prisma/dev.db` を作成してから、以下を実行してください。
-
-```bash
-npx prisma db push
 ```
 
 保存されたデータを確認したい場合は、Prisma Studioを使えます。
@@ -112,6 +123,36 @@ npm run dev
 ```text
 http://localhost:3000
 ```
+
+## Vercelで公開する手順
+
+1. GitHubにこのリポジトリをpushします。
+2. Vercelで新しいプロジェクトとしてインポートします。
+3. VercelのEnvironment Variablesに `DATABASE_URL` を追加します。
+4. 値にはSupabase Postgresの接続文字列を設定します。
+5. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
+
+```bash
+npx prisma migrate deploy
+```
+
+6. Vercelで再デプロイします。
+
+`postinstall` で `prisma generate` を実行するため、Vercelのビルド時にもPrisma Clientが生成されます。
+
+## 履歴共有について
+
+初期リリースでは認証機能がありません。
+
+そのため、Vercelなどで公開した場合は以下の挙動になります。
+
+- 生成履歴は全ユーザーで共有される
+- 誰かが作成した履歴を他のユーザーも見られる
+- 誰かが履歴を削除すると他のユーザーにも反映される
+
+個人情報、未公開アイデア、機密情報は入力しないでください。
+
+次のバージョンで、Supabase Authなどを使ったユーザー認証と、ユーザー別の履歴保存を追加する予定です。
 
 ## 使い方
 
@@ -150,17 +191,17 @@ http://localhost:3000
 
 ### DBに保存されない
 
-`.env.local` が作成されているか確認してください。
+`.env.local` とVercelのEnvironment Variablesに `DATABASE_URL` が設定されているか確認してください。
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 ```
 
 その後、以下を実行してください。
 
 ```bash
 npx prisma generate
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 ```
 
 ### Prismaエラー
@@ -190,7 +231,8 @@ npx prisma migrate dev
 - AIによる要件整理
 - Ollama + Qwen3 連携
 - OpenAI API連携
-- Supabase保存
+- ユーザー認証
+- ユーザー別の履歴保存
 - テンプレート機能
 - スマホアプリ用プロンプト強化
 - 生成プロンプトの品質チェック

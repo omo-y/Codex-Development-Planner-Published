@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -23,5 +23,5 @@ model ProjectPlan {
   extraNotes       String?
   generatedPrompt  String
 
-  // SaaS化する場合は、ここに userId を追加し、ユーザーごとの保存に対応する。
+  // 次バージョンでユーザー認証を追加する場合は、ここに userId を追加し、ユーザーごとの保存に対応する。
 }

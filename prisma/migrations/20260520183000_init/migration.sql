@@ -1,8 +1,8 @@
 -- CreateTable
 CREATE TABLE "ProjectPlan" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "id" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "appName" TEXT NOT NULL,
     "appIdea" TEXT NOT NULL,
     "targetUser" TEXT NOT NULL,
@@ -13,5 +13,7 @@ CREATE TABLE "ProjectPlan" (
     "features" TEXT NOT NULL,
     "screens" TEXT NOT NULL,
     "extraNotes" TEXT,
-    "generatedPrompt" TEXT NOT NULL
+    "generatedPrompt" TEXT NOT NULL,
+
+    CONSTRAINT "ProjectPlan_pkey" PRIMARY KEY ("id")
 );
