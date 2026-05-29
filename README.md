@@ -69,16 +69,20 @@ Vercelなどで公開した場合、生成履歴はアクセスした全ユー�
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 ```
 
-Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます。ローカルで `npx prisma migrate dev` を使う場合は、同じ内容で `.env` も作成してください。
+`DATABASE_URL` はアプリ実行用の pooler 接続文字列、`DIRECT_URL` は Prisma migrate / Prisma Studio 用の direct 接続文字列を設定してください。
+
+Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます。ローカルで `npx prisma migrate dev` や `npx prisma studio` を使う場合は、同じ内容で `.env` も作成してください。
 
 ## Supabaseの準備
 
 1. Supabaseで新しいプロジェクトを作成します。
 2. Project Settings からPostgresの接続文字列を確認します。
-3. Prismaで使う `DATABASE_URL` として、Supabase Postgresの接続文字列を `.env.local` と `.env` に設定します。
-4. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
+3. `DATABASE_URL` には Supabase Postgres の pooler 接続文字列を設定します。
+4. `DIRECT_URL` には Supabase Postgres の direct 接続文字列を設定します。
+5. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
 
 ## インストール手順
 
@@ -128,15 +132,16 @@ http://localhost:3000
 
 1. GitHubにこのリポジトリをpushします。
 2. Vercelで新しいプロジェクトとしてインポートします。
-3. VercelのEnvironment Variablesに `DATABASE_URL` を追加します。
-4. 値にはSupabase Postgresの接続文字列を設定します。
-5. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
+3. VercelのEnvironment Variablesに `DATABASE_URL` と `DIRECT_URL` を追加します。
+4. `DATABASE_URL` には Supabase Postgres の pooler 接続文字列を設定します。
+5. `DIRECT_URL` には Supabase Postgres の direct 接続文字列を設定します。
+6. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
 
 ```bash
 npx prisma migrate deploy
 ```
 
-6. Vercelで再デプロイします。
+7. Vercelで再デプロイします。
 
 `postinstall` で `prisma generate` を実行するため、Vercelのビルド時にもPrisma Clientが生成されます。
 
@@ -191,10 +196,11 @@ npx prisma migrate deploy
 
 ### DBに保存されない
 
-`.env.local` とVercelのEnvironment Variablesに `DATABASE_URL` が設定されているか確認してください。
+`.env.local` とVercelのEnvironment Variablesに `DATABASE_URL` と `DIRECT_URL` が設定されているか確認してください。
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 ```
 
 その後、以下を実行してください。

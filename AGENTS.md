@@ -57,13 +57,17 @@ Prisma CLIを使う場合は `.env` にSupabase Postgresの接続文字列が必
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 ```
 
 Next.js実行時は `.env.local` も使います。
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 ```
+
+`DATABASE_URL` はアプリ実行用の pooler 接続文字列、`DIRECT_URL` は Prisma migrate / Prisma Studio 用の direct 接続文字列として扱う。
 
 初期リリースでは認証機能を入れない。次バージョンでSupabase Authなどを使い、`ProjectPlan` に `userId` を追加してユーザー別履歴保存に対応する想定。
 
