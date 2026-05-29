@@ -77,6 +77,31 @@ function getSupabaseBrowserConfig() {
   };
 }
 
+function formatAuthErrorMessage(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("email rate limit") ||
+    normalizedMessage.includes("rate limit")
+  ) {
+    return "短時間に何度も新規登録やメール送信を行ったため、Supabase側の制限により一時的に登録できません。しばらく時間をおいてから再度お試しください。開発中に何度も試す場合は、Supabaseで確認メールを無効にするか、SMTP設定の追加を検討してください。";
+  }
+
+  if (normalizedMessage.includes("invalid login credentials")) {
+    return "メールアドレスまたはパスワードが正しくありません。入力内容を確認してください。";
+  }
+
+  if (normalizedMessage.includes("email not confirmed")) {
+    return "メール確認が完了していません。Supabaseから届いた確認メールのリンクを開いてからログインしてください。";
+  }
+
+  if (normalizedMessage.includes("user already registered")) {
+    return "このメールアドレスはすでに登録されています。ログインを選んでください。";
+  }
+
+  return message;
+}
+
 function loadStoredSession(): AuthSession | null {
   if (typeof window === "undefined") {
     return null;
@@ -416,10 +441,13 @@ export default function Home() {
       };
 
       if (!response.ok) {
-        throw new Error(
+        const authErrorMessage =
           data.error_description ??
-            data.msg ??
-            "ログインまたはユーザー登録に失敗しました。"
+          data.msg ??
+          "ログインまたはユーザー登録に失敗しました。";
+
+        throw new Error(
+          formatAuthErrorMessage(authErrorMessage)
         );
       }
 

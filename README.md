@@ -248,6 +248,19 @@ SupabaseのAuthentication設定を確認してください。
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` が正しいか
 - メール確認が有効な場合、確認メールのリンクを開いたか
 
+### 新規登録で `email rate limit exceeded` が出る
+
+短時間に何度も新規登録、アカウント削除、確認メール送信を繰り返すと、Supabase Auth側のメール送信制限に当たることがあります。
+
+この場合はアプリの不具合ではなく、Supabase側の一時的な制限です。しばらく時間をおいてから再度お試しください。
+
+開発中に何度も登録テストをする場合は、以下を検討してください。
+
+- 既存のテスト用アカウントを使い回す
+- Supabaseのメール確認設定を開発中だけ無効にする
+- Supabaseに独自SMTPを設定する
+- Auth Users画面でテストユーザーを直接確認・整理する
+
 ### アカウント削除できない
 
 `SUPABASE_SERVICE_ROLE_KEY` が `.env.local` とVercelのEnvironment Variablesに設定されているか確認してください。
