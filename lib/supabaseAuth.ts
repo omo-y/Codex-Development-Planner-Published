@@ -19,6 +19,22 @@ function getSupabaseConfig() {
   };
 }
 
+function getSupabaseAdminConfig() {
+  const { supabaseUrl } = getSupabaseConfig();
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseServiceRoleKey) {
+    throw new Error(
+      "アカウント削除用の環境変数 SUPABASE_SERVICE_ROLE_KEY が設定されていません。"
+    );
+  }
+
+  return {
+    supabaseUrl,
+    supabaseServiceRoleKey
+  };
+}
+
 export async function getAuthenticatedUser(
   request: Request
 ): Promise<AuthenticatedUser> {
@@ -57,4 +73,22 @@ export async function getAuthenticatedUser(
     id: user.id,
     email: user.email
   };
+}
+
+export async function deleteSupabaseAuthUser(userId: string): Promise<void> {
+  const { supabaseUrl, supabaseServiceRoleKey } = getSupabaseAdminConfig();
+  const response = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      "Supabase Auth のユーザー削除に失敗しました。Service Role Key の設定を確認してください。"
+    );
+  }
 }

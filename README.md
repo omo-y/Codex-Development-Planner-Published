@@ -71,11 +71,14 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&conne
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 ```
 
 `DATABASE_URL` はアプリ実行用の pooler 接続文字列、`DIRECT_URL` は Prisma migrate / Prisma Studio 用の direct 接続文字列を設定してください。
 
 `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` は、Supabase Authでユーザー登録・ログインを行うために使います。
+
+`SUPABASE_SERVICE_ROLE_KEY` は、アカウント削除時にSupabase Authのユーザーを削除するためにサーバー側だけで使います。ブラウザに公開されないよう、`NEXT_PUBLIC_` を付けないでください。
 
 Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます。ローカルで `npx prisma migrate dev` や `npx prisma studio` を使う場合は、同じ内容で `.env` も作成してください。
 
@@ -86,8 +89,9 @@ Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます
 3. `DATABASE_URL` には Supabase Postgres の pooler 接続文字列を設定します。
 4. `DIRECT_URL` には Supabase Postgres の direct 接続文字列を設定します。
 5. Project Settings > API から `Project URL` と `anon public` key を確認し、`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` に設定します。
-6. Authentication > Providers で Email provider が有効になっていることを確認します。
-7. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
+6. Project Settings > API から `service_role` key を確認し、`SUPABASE_SERVICE_ROLE_KEY` に設定します。
+7. Authentication > Providers で Email provider が有効になっていることを確認します。
+8. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
 
 ## インストール手順
 
@@ -137,17 +141,18 @@ http://localhost:3000
 
 1. GitHubにこのリポジトリをpushします。
 2. Vercelで新しいプロジェクトとしてインポートします。
-3. VercelのEnvironment Variablesに `DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` を追加します。
+3. VercelのEnvironment Variablesに `DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` を追加します。
 4. `DATABASE_URL` には Supabase Postgres の pooler 接続文字列を設定します。
 5. `DIRECT_URL` には Supabase Postgres の direct 接続文字列を設定します。
-6. `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` には Supabase Project Settings > API の値を設定します。
-7. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
+6. `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` には Supabase Project Settings > API の値を設定します。
+7. `SUPABASE_SERVICE_ROLE_KEY` はサーバー専用の秘密情報です。GitHubにコミットせず、Vercelの環境変数だけに設定してください。
+8. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
 
 ```bash
 npx prisma migrate deploy
 ```
 
-8. Vercelで再デプロイします。
+9. Vercelで再デプロイします。
 
 `postinstall` で `prisma generate` を実行するため、Vercelのビルド時にもPrisma Clientが生成されます。
 
@@ -161,6 +166,7 @@ npx prisma migrate deploy
 - 生成履歴はユーザーごとに保存される
 - 他のユーザーの履歴は表示されない
 - 履歴削除も自分の履歴だけが対象になる
+- アカウント削除を行うと、自分の生成履歴とSupabase Authのユーザーが削除される
 
 Supabase側でメール確認を有効にしている場合、新規登録後に確認メールのリンクを開いてからログインしてください。
 
@@ -202,13 +208,14 @@ Supabase側でメール確認を有効にしている場合、新規登録後に
 
 ### DBに保存されない
 
-`.env.local` とVercelのEnvironment Variablesに `DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` が設定されているか確認してください。
+`.env.local` とVercelのEnvironment Variablesに `DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` が設定されているか確認してください。
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 ```
 
 その後、以下を実行してください。
@@ -240,6 +247,12 @@ SupabaseのAuthentication設定を確認してください。
 - `NEXT_PUBLIC_SUPABASE_URL` が正しいか
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` が正しいか
 - メール確認が有効な場合、確認メールのリンクを開いたか
+
+### アカウント削除できない
+
+`SUPABASE_SERVICE_ROLE_KEY` が `.env.local` とVercelのEnvironment Variablesに設定されているか確認してください。
+
+Service Role Keyは強い権限を持つため、GitHubにコミットしたり、`NEXT_PUBLIC_` を付けてブラウザへ公開したりしないでください。
 
 ### コピーできない
 

@@ -262,6 +262,7 @@ export default function Home() {
   const [successMessage, setSuccessMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const featureOptions = useMemo(() => {
     const preset = APP_IDEA_PRESETS.find(
@@ -456,6 +457,54 @@ export default function Home() {
     setHistory([]);
     setGeneratedPrompt("");
     setSuccessMessage("ログアウトしました。");
+  }
+
+  async function handleDeleteAccount() {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!authSession) {
+      setErrorMessage("アカウント削除にはログインが必要です。");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "アカウントと生成履歴を削除します。この操作は元に戻せません。削除しますか？"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      const response = await fetch("/api/account", {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
+      const data = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "アカウント削除に失敗しました。");
+      }
+
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      setAuthSession(null);
+      setHistory([]);
+      setGeneratedPrompt("");
+      setAuthEmail("");
+      setAuthPassword("");
+      setSuccessMessage("アカウントと生成履歴を削除しました。");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "アカウント削除に失敗しました。時間をおいてもう一度お試しください。"
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
   }
 
   function updateForm<K extends keyof ProjectPlanInput>(
@@ -700,13 +749,24 @@ export default function Home() {
             </div>
 
             {authSession ? (
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-mist"
-              >
-                ログアウト
-              </button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={isDeletingAccount}
+                  className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-mist disabled:cursor-not-allowed disabled:text-slate-400"
+                >
+                  ログアウト
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteAccount()}
+                  disabled={isDeletingAccount}
+                  className="rounded-md border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300"
+                >
+                  {isDeletingAccount ? "削除中..." : "アカウント削除"}
+                </button>
+              </div>
             ) : (
               <form
                 onSubmit={handleAuthSubmit}

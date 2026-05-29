@@ -76,3 +76,15 @@ export async function deleteProjectPlan(
 
   return result.count > 0;
 }
+
+export async function deleteProjectPlansByUserId(
+  userId: string
+): Promise<number> {
+  const result = await prisma.projectPlan.deleteMany({
+    where: {
+      userId
+    }
+  });
+
+  return result.count;
+}

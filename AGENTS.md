@@ -27,7 +27,8 @@
 - `app/page.tsx`: メイン画面。初期リリースでは初心者向けフローのみを持つ。
 - `app/api/prompt/route.ts`: Codex用プロンプト生成API。
 - `app/api/projects/route.ts`: 生成履歴の取得、保存、削除API。
-- `lib/supabaseAuth.ts`: Supabase Authのアクセストークン検証。
+- `app/api/account/route.ts`: アカウント削除API。履歴削除後、Supabase Authユーザーを削除する。
+- `lib/supabaseAuth.ts`: Supabase Authのアクセストークン検証とAuthユーザー削除。
 - `lib/promptBuilder.ts`: テンプレートベースのプロンプト生成。
 - `lib/projectRepository.ts`: Prismaを使ったDB操作。
 - `lib/templates.ts`: 選択肢、プリセット、補足テンプレート。
@@ -52,6 +53,7 @@
 - 対象ユーザーが空の場合はエラーにする。
 - DB保存に失敗しても、生成済みプロンプトの表示は消さない。
 - 履歴取得、履歴削除、クリップボードコピーの失敗も日本語で表示する。
+- アカウント削除失敗時は、環境変数やSupabase設定を確認しやすい日本語メッセージにする。
 
 ## Prisma
 
@@ -62,6 +64,7 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&conne
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 ```
 
 Next.js実行時は `.env.local` も使います。
@@ -71,11 +74,14 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&conne
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 ```
 
 `DATABASE_URL` はアプリ実行用の pooler 接続文字列、`DIRECT_URL` は Prisma migrate / Prisma Studio 用の direct 接続文字列として扱う。
 
 `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` はSupabase Authのログイン/新規登録と、API側のトークン検証に使う。
+
+`SUPABASE_SERVICE_ROLE_KEY` はアカウント削除時にサーバー側だけで使う。`NEXT_PUBLIC_` を付けず、クライアントコードへ渡さない。
 
 ## 検証コマンド
 
