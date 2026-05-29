@@ -772,29 +772,36 @@ export default function Home() {
                 onSubmit={handleAuthSubmit}
                 className="grid w-full gap-3 lg:max-w-md"
               >
-                <div className="grid grid-cols-2 rounded-md border border-line bg-slate-50 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode("signin")}
-                    className={`rounded px-3 py-2 text-sm font-semibold transition ${
-                      authMode === "signin"
-                        ? "bg-blue-700 text-white"
-                        : "text-slate-700 hover:bg-white"
-                    }`}
-                  >
-                    ログイン
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthMode("signup")}
-                    className={`rounded px-3 py-2 text-sm font-semibold transition ${
-                      authMode === "signup"
-                        ? "bg-blue-700 text-white"
-                        : "text-slate-700 hover:bg-white"
-                    }`}
-                  >
-                    新規登録
-                  </button>
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-slate-600">
+                    先に操作を選んでください
+                  </p>
+                  <div className="grid grid-cols-2 rounded-md border border-line bg-slate-50 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("signin")}
+                      aria-pressed={authMode === "signin"}
+                      className={`rounded px-3 py-2 text-sm font-semibold transition ${
+                        authMode === "signin"
+                          ? "border border-blue-200 bg-white text-blue-700 shadow-sm"
+                          : "text-slate-600 hover:bg-white"
+                      }`}
+                    >
+                      {authMode === "signin" ? "ログインを選択中" : "ログイン"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("signup")}
+                      aria-pressed={authMode === "signup"}
+                      className={`rounded px-3 py-2 text-sm font-semibold transition ${
+                        authMode === "signup"
+                          ? "border border-blue-200 bg-white text-blue-700 shadow-sm"
+                          : "text-slate-600 hover:bg-white"
+                      }`}
+                    >
+                      {authMode === "signup" ? "新規登録を選択中" : "新規登録"}
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="email"
@@ -821,8 +828,8 @@ export default function Home() {
                   {isAuthenticating
                     ? "処理中..."
                     : authMode === "signin"
-                      ? "ログイン"
-                      : "新規登録"}
+                      ? "ログインを実行"
+                      : "アカウントを作成"}
                 </button>
                 {authMessage ? (
                   <p className="text-xs leading-5 text-slate-600">{authMessage}</p>
