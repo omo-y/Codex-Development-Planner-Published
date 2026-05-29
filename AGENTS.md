@@ -19,6 +19,7 @@
 - React
 - Tailwind CSS
 - Supabase Postgres
+- Supabase Auth
 - Prisma
 
 ## 重要なファイル
@@ -26,6 +27,7 @@
 - `app/page.tsx`: メイン画面。初期リリースでは初心者向けフローのみを持つ。
 - `app/api/prompt/route.ts`: Codex用プロンプト生成API。
 - `app/api/projects/route.ts`: 生成履歴の取得、保存、削除API。
+- `lib/supabaseAuth.ts`: Supabase Authのアクセストークン検証。
 - `lib/promptBuilder.ts`: テンプレートベースのプロンプト生成。
 - `lib/projectRepository.ts`: Prismaを使ったDB操作。
 - `lib/templates.ts`: 選択肢、プリセット、補足テンプレート。
@@ -41,7 +43,7 @@
 - 将来、詳細入力モードを追加する場合も、既存の初心者向けフローを壊さない。
 - 生成結果はコピーしやすい textarea で表示する。
 - エラー文は日本語で分かりやすく表示する。
-- 初期リリースには認証がないため、履歴が全ユーザーで共有されることを画面とREADMEに明記する。
+- 初期リリースではSupabase Authを使い、履歴はユーザーごとに保存する。
 
 ## エラー処理
 
@@ -58,6 +60,8 @@ Prisma CLIを使う場合は `.env` にSupabase Postgresの接続文字列が必
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
 ```
 
 Next.js実行時は `.env.local` も使います。
@@ -65,11 +69,13 @@ Next.js実行時は `.env.local` も使います。
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
 ```
 
 `DATABASE_URL` はアプリ実行用の pooler 接続文字列、`DIRECT_URL` は Prisma migrate / Prisma Studio 用の direct 接続文字列として扱う。
 
-初期リリースでは認証機能を入れない。次バージョンでSupabase Authなどを使い、`ProjectPlan` に `userId` を追加してユーザー別履歴保存に対応する想定。
+`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` はSupabase Authのログイン/新規登録と、API側のトークン検証に使う。
 
 ## 検証コマンド
 

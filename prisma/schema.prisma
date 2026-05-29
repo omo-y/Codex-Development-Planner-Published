@@ -23,6 +23,7 @@ model ProjectPlan {
   screens          String
   extraNotes       String?
   generatedPrompt  String
+  userId           String?
 
-  // 次バージョンでユーザー認証を追加する場合は、ここに userId を追加し、ユーザーごとの保存に対応する。
+  @@index([userId, createdAt])
 }

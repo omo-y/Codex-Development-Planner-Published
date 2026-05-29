@@ -28,6 +28,16 @@ const initialForm: ProjectPlanInput = {
   extraNotes: BEGINNER_NOTES.join("\n")
 };
 
+type AuthMode = "signin" | "signup";
+
+type AuthSession = {
+  accessToken: string;
+  refreshToken?: string;
+  email: string;
+};
+
+const AUTH_STORAGE_KEY = "codex-development-planner-session";
+
 function linesToItems(value: string) {
   return value
     .split(/\r?\n/)
@@ -49,6 +59,42 @@ function formatDate(value: string) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(value));
+}
+
+function getSupabaseBrowserConfig() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Supabase認証の環境変数が設定されていません。NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY を設定してください。"
+    );
+  }
+
+  return {
+    supabaseUrl,
+    supabaseAnonKey
+  };
+}
+
+function loadStoredSession(): AuthSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawSession = window.localStorage.getItem(AUTH_STORAGE_KEY);
+
+  if (!rawSession) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawSession) as AuthSession;
+    return parsed.accessToken && parsed.email ? parsed : null;
+  } catch {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    return null;
+  }
 }
 
 type OptionCardProps = {
@@ -196,6 +242,14 @@ function TextAreaField({
 }
 
 export default function Home() {
+  const [authMode, setAuthMode] = useState<AuthMode>("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authSession, setAuthSession] = useState<AuthSession | null>(
+    loadStoredSession
+  );
+  const [authMessage, setAuthMessage] = useState("");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [form, setForm] = useState<ProjectPlanInput>(initialForm);
   const [selectedPresetTitle, setSelectedPresetTitle] = useState(
     defaultPreset.title
@@ -207,7 +261,7 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const featureOptions = useMemo(() => {
     const preset = APP_IDEA_PRESETS.find(
@@ -236,11 +290,25 @@ export default function Home() {
   );
   const canCopy = generatedPrompt.trim().length > 0;
 
+  function getAuthHeaders(): Record<string, string> {
+    return authSession
+      ? {
+          Authorization: `Bearer ${authSession.accessToken}`
+        }
+      : {};
+  }
+
   async function loadHistory() {
+    if (!authSession) {
+      setHistory([]);
+      return;
+    }
+
     setIsLoadingHistory(true);
     try {
       const response = await fetch("/api/projects", {
         method: "GET",
+        headers: getAuthHeaders(),
         cache: "no-store"
       });
       const data = (await response.json()) as {
@@ -265,8 +333,17 @@ export default function Home() {
   useEffect(() => {
     let isMounted = true;
 
+    if (!authSession) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
     fetch("/api/projects", {
       method: "GET",
+      headers: {
+        Authorization: `Bearer ${authSession.accessToken}`
+      },
       cache: "no-store"
     })
       .then(async (response) => {
@@ -301,7 +378,85 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [authSession]);
+
+  async function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+    setAuthMessage("");
+    setIsAuthenticating(true);
+
+    try {
+      const { supabaseUrl, supabaseAnonKey } = getSupabaseBrowserConfig();
+      const endpoint =
+        authMode === "signin"
+          ? `${supabaseUrl}/auth/v1/token?grant_type=password`
+          : `${supabaseUrl}/auth/v1/signup`;
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          apikey: supabaseAnonKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: authEmail,
+          password: authPassword
+        })
+      });
+      const data = (await response.json()) as {
+        access_token?: string;
+        refresh_token?: string;
+        user?: {
+          email?: string;
+        };
+        msg?: string;
+        error_description?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          data.error_description ??
+            data.msg ??
+            "ログインまたはユーザー登録に失敗しました。"
+        );
+      }
+
+      if (!data.access_token) {
+        setAuthMessage(
+          "登録を受け付けました。Supabaseの設定によっては、確認メールのリンクを開いてからログインしてください。"
+        );
+        return;
+      }
+
+      const nextSession: AuthSession = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        email: data.user?.email ?? authEmail
+      };
+
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextSession));
+      setAuthSession(nextSession);
+      setAuthPassword("");
+      setSuccessMessage("ログインしました。履歴はこのユーザーのものだけ表示されます。");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "ログインまたはユーザー登録に失敗しました。"
+      );
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }
+
+  function handleSignOut() {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    setAuthSession(null);
+    setHistory([]);
+    setGeneratedPrompt("");
+    setSuccessMessage("ログアウトしました。");
+  }
 
   function updateForm<K extends keyof ProjectPlanInput>(
     key: K,
@@ -390,6 +545,12 @@ export default function Home() {
     event.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
+
+    if (!authSession) {
+      setErrorMessage("履歴保存にはログインが必要です。先にログインしてください。");
+      return;
+    }
+
     setIsGenerating(true);
 
     const submitInput = buildSubmitInput();
@@ -421,6 +582,7 @@ export default function Home() {
       const saveResponse = await fetch("/api/projects", {
         method: "POST",
         headers: {
+          ...getAuthHeaders(),
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -471,9 +633,15 @@ export default function Home() {
     setErrorMessage("");
     setSuccessMessage("");
 
+    if (!authSession) {
+      setErrorMessage("履歴削除にはログインが必要です。");
+      return;
+    }
+
     try {
       const response = await fetch(`/api/projects?id=${encodeURIComponent(id)}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: getAuthHeaders()
       });
       const data = (await response.json()) as { error?: string };
 
@@ -503,9 +671,6 @@ export default function Home() {
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700">
             作りたいアプリのアイデアを入力すると、要件・機能・画面構成・開発環境を整理し、Codexアプリに貼り付けられる開発プロンプトを生成します。
           </p>
-          <div className="mt-4 max-w-3xl rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-            初期リリースには認証機能がありません。Vercelなどで公開した場合、生成履歴はアクセスした全ユーザーで共有されます。個人情報、未公開アイデア、機密情報は入力しないでください。次バージョンでユーザー認証とユーザー別履歴保存を追加予定です。
-          </div>
         </header>
 
         {(errorMessage || successMessage) && (
@@ -519,6 +684,93 @@ export default function Home() {
             {errorMessage || successMessage}
           </div>
         )}
+
+        <section className="rounded-md border border-line bg-white p-4 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-ink">ログイン</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                生成履歴はログイン中のユーザーごとに保存されます。プロンプト生成と履歴保存にはログインが必要です。
+              </p>
+              {authSession ? (
+                <p className="mt-2 text-sm font-semibold text-blue-700">
+                  ログイン中: {authSession.email}
+                </p>
+              ) : null}
+            </div>
+
+            {authSession ? (
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="rounded-md border border-line px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-mist"
+              >
+                ログアウト
+              </button>
+            ) : (
+              <form
+                onSubmit={handleAuthSubmit}
+                className="grid w-full gap-3 lg:max-w-md"
+              >
+                <div className="grid grid-cols-2 rounded-md border border-line bg-slate-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("signin")}
+                    className={`rounded px-3 py-2 text-sm font-semibold transition ${
+                      authMode === "signin"
+                        ? "bg-blue-700 text-white"
+                        : "text-slate-700 hover:bg-white"
+                    }`}
+                  >
+                    ログイン
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode("signup")}
+                    className={`rounded px-3 py-2 text-sm font-semibold transition ${
+                      authMode === "signup"
+                        ? "bg-blue-700 text-white"
+                        : "text-slate-700 hover:bg-white"
+                    }`}
+                  >
+                    新規登録
+                  </button>
+                </div>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(event) => setAuthEmail(event.target.value)}
+                  placeholder="メールアドレス"
+                  className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  required
+                />
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(event) => setAuthPassword(event.target.value)}
+                  placeholder="パスワード"
+                  className="w-full rounded-md border border-line bg-white px-3 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="submit"
+                  disabled={isAuthenticating}
+                  className="rounded-md bg-blue-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {isAuthenticating
+                    ? "処理中..."
+                    : authMode === "signin"
+                      ? "ログイン"
+                      : "新規登録"}
+                </button>
+                {authMessage ? (
+                  <p className="text-xs leading-5 text-slate-600">{authMessage}</p>
+                ) : null}
+              </form>
+            )}
+          </div>
+        </section>
 
         <form
           onSubmit={handleGenerate}
@@ -722,10 +974,14 @@ export default function Home() {
 
             <button
               type="submit"
-              disabled={isGenerating}
+              disabled={isGenerating || !authSession}
               className="w-full rounded-md bg-blue-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
             >
-              {isGenerating ? "生成中..." : "Codex用プロンプトを生成"}
+              {isGenerating
+                ? "生成中..."
+                : authSession
+                  ? "Codex用プロンプトを生成"
+                  : "ログインすると生成できます"}
             </button>
           </section>
 
@@ -791,13 +1047,18 @@ export default function Home() {
             <button
               type="button"
               onClick={() => void loadHistory()}
+              disabled={!authSession}
               className="rounded-md border border-line px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-mist"
             >
               更新
             </button>
           </div>
 
-          {isLoadingHistory ? (
+          {!authSession ? (
+            <p className="rounded-md bg-mist p-4 text-sm text-slate-600">
+              ログインすると、自分の生成履歴だけが表示されます。
+            </p>
+          ) : isLoadingHistory ? (
             <p className="rounded-md bg-mist p-4 text-sm text-slate-600">
               履歴を読み込んでいます。
             </p>

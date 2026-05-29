@@ -6,11 +6,9 @@ Codex開発プランナーは、作りたいアプリのアイデアを整理し
 
 ## 初期リリースの注意
 
-この初期リリースには認証機能がありません。
+この初期リリースでは、Supabase Authによるメールアドレス・パスワード認証を使います。
 
-Vercelなどで公開した場合、生成履歴はアクセスした全ユーザーで共有されます。個人情報、未公開アイデア、機密情報は入力しないでください。
-
-次のバージョンで、ユーザー認証とユーザー別の履歴保存を追加する予定です。
+生成履歴はログイン中のユーザーごとに保存されます。プロンプト生成と履歴保存にはログインが必要です。
 
 ## 入力方式
 
@@ -41,7 +39,8 @@ Vercelなどで公開した場合、生成履歴はアクセスした全ユー�
 - 画面チェックリスト
 - 開発環境、使用AI、保存方式の詳細設定
 - Codex用プロンプト生成
-- 生成履歴保存
+- ユーザー登録・ログイン
+- ユーザーごとの生成履歴保存
 - 最新5件の履歴表示
 - 履歴から入力内容を復元
 - 履歴削除
@@ -70,9 +69,13 @@ Vercelなどで公開した場合、生成履歴はアクセスした全ユー�
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
 ```
 
 `DATABASE_URL` はアプリ実行用の pooler 接続文字列、`DIRECT_URL` は Prisma migrate / Prisma Studio 用の direct 接続文字列を設定してください。
+
+`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` は、Supabase Authでユーザー登録・ログインを行うために使います。
 
 Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます。ローカルで `npx prisma migrate dev` や `npx prisma studio` を使う場合は、同じ内容で `.env` も作成してください。
 
@@ -82,7 +85,9 @@ Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます
 2. Project Settings からPostgresの接続文字列を確認します。
 3. `DATABASE_URL` には Supabase Postgres の pooler 接続文字列を設定します。
 4. `DIRECT_URL` には Supabase Postgres の direct 接続文字列を設定します。
-5. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
+5. Project Settings > API から `Project URL` と `anon public` key を確認し、`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` に設定します。
+6. Authentication > Providers で Email provider が有効になっていることを確認します。
+7. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
 
 ## インストール手順
 
@@ -132,32 +137,32 @@ http://localhost:3000
 
 1. GitHubにこのリポジトリをpushします。
 2. Vercelで新しいプロジェクトとしてインポートします。
-3. VercelのEnvironment Variablesに `DATABASE_URL` と `DIRECT_URL` を追加します。
+3. VercelのEnvironment Variablesに `DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` を追加します。
 4. `DATABASE_URL` には Supabase Postgres の pooler 接続文字列を設定します。
 5. `DIRECT_URL` には Supabase Postgres の direct 接続文字列を設定します。
-6. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
+6. `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` には Supabase Project Settings > API の値を設定します。
+7. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
 
 ```bash
 npx prisma migrate deploy
 ```
 
-7. Vercelで再デプロイします。
+8. Vercelで再デプロイします。
 
 `postinstall` で `prisma generate` を実行するため、Vercelのビルド時にもPrisma Clientが生成されます。
 
-## 履歴共有について
+## ユーザー認証と履歴保存について
 
-初期リリースでは認証機能がありません。
+初期リリースでは、Supabase Authによるメールアドレス・パスワード認証を使います。
 
-そのため、Vercelなどで公開した場合は以下の挙動になります。
+履歴保存の挙動は以下です。
 
-- 生成履歴は全ユーザーで共有される
-- 誰かが作成した履歴を他のユーザーも見られる
-- 誰かが履歴を削除すると他のユーザーにも反映される
+- ログインしているユーザーだけがプロンプトを生成して履歴保存できる
+- 生成履歴はユーザーごとに保存される
+- 他のユーザーの履歴は表示されない
+- 履歴削除も自分の履歴だけが対象になる
 
-個人情報、未公開アイデア、機密情報は入力しないでください。
-
-次のバージョンで、Supabase Authなどを使ったユーザー認証と、ユーザー別の履歴保存を追加する予定です。
+Supabase側でメール確認を有効にしている場合、新規登録後に確認メールのリンクを開いてからログインしてください。
 
 ## 使い方
 
@@ -168,8 +173,9 @@ npx prisma migrate deploy
 5. 必要機能と画面構成をチェックします。
 6. 必要に応じて、追加したい機能や画面を入力します。
 7. 技術構成を変えたい場合だけ、詳細設定を開いて変更します。
-8. 「Codex用プロンプトを生成」を押します。
-9. 生成されたプロンプトをコピーし、Codexアプリに貼り付けます。
+8. ログインまたは新規登録します。
+9. 「Codex用プロンプトを生成」を押します。
+10. 生成されたプロンプトをコピーし、Codexアプリに貼り付けます。
 
 ## 生成した開発プロンプトの使い方
 
@@ -196,11 +202,13 @@ npx prisma migrate deploy
 
 ### DBに保存されない
 
-`.env.local` とVercelのEnvironment Variablesに `DATABASE_URL` と `DIRECT_URL` が設定されているか確認してください。
+`.env.local` とVercelのEnvironment Variablesに `DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY` が設定されているか確認してください。
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
 ```
 
 その後、以下を実行してください。
@@ -224,6 +232,15 @@ DBの状態を作り直したい場合は、開発環境であることを確認
 npx prisma migrate dev
 ```
 
+### ログインできない
+
+SupabaseのAuthentication設定を確認してください。
+
+- Email provider が有効になっているか
+- `NEXT_PUBLIC_SUPABASE_URL` が正しいか
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` が正しいか
+- メール確認が有効な場合、確認メールのリンクを開いたか
+
 ### コピーできない
 
 ブラウザのクリップボード権限が無効になっている可能性があります。別のブラウザで試すか、生成結果のテキストエリアから手動でコピーしてください。
@@ -237,8 +254,8 @@ npx prisma migrate dev
 - AIによる要件整理
 - Ollama + Qwen3 連携
 - OpenAI API連携
-- ユーザー認証
-- ユーザー別の履歴保存
+- パスワードリセット
+- プロフィール管理
 - テンプレート機能
 - スマホアプリ用プロンプト強化
 - 生成プロンプトの品質チェック

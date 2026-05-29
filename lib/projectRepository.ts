@@ -24,7 +24,8 @@ function toProjectPlanResponse(plan: ProjectPlan): ProjectPlanResponse {
 
 export async function createProjectPlan(
   input: ProjectPlanInput,
-  generatedPrompt: string
+  generatedPrompt: string,
+  userId: string
 ): Promise<ProjectPlanResponse> {
   const plan = await prisma.projectPlan.create({
     data: {
@@ -38,15 +39,21 @@ export async function createProjectPlan(
       features: input.features.trim(),
       screens: input.screens.trim(),
       extraNotes: input.extraNotes?.trim() || null,
-      generatedPrompt
+      generatedPrompt,
+      userId
     }
   });
 
   return toProjectPlanResponse(plan);
 }
 
-export async function getRecentProjectPlans(): Promise<ProjectPlanResponse[]> {
+export async function getRecentProjectPlans(
+  userId: string
+): Promise<ProjectPlanResponse[]> {
   const plans = await prisma.projectPlan.findMany({
+    where: {
+      userId
+    },
     orderBy: {
       createdAt: "desc"
     },
@@ -56,10 +63,16 @@ export async function getRecentProjectPlans(): Promise<ProjectPlanResponse[]> {
   return plans.map(toProjectPlanResponse);
 }
 
-export async function deleteProjectPlan(id: string): Promise<void> {
-  await prisma.projectPlan.delete({
+export async function deleteProjectPlan(
+  id: string,
+  userId: string
+): Promise<boolean> {
+  const result = await prisma.projectPlan.deleteMany({
     where: {
-      id
+      id,
+      userId
     }
   });
+
+  return result.count > 0;
 }
