@@ -51,6 +51,61 @@ function itemsToLines(items: string[]) {
   );
 }
 
+function countMatches(leftItems: string[], rightItems: string[]) {
+  const rightSet = new Set(rightItems);
+  return leftItems.filter((item) => rightSet.has(item)).length;
+}
+
+function hasSameItems(leftItems: string[], rightItems: string[]) {
+  const leftSet = new Set(leftItems);
+  const rightSet = new Set(rightItems);
+
+  if (leftSet.size !== rightSet.size) {
+    return false;
+  }
+
+  return leftItems.every((item) => rightSet.has(item));
+}
+
+function findBestPresetTitle(project: ProjectPlanResponse) {
+  const projectFeatures = linesToItems(project.features);
+  const projectScreens = linesToItems(project.screens);
+
+  const scoredPresets = APP_IDEA_PRESETS.map((preset) => {
+    let score = 0;
+
+    if (preset.appType === project.appType) {
+      score += 3;
+    }
+
+    if (preset.developmentStack === project.developmentStack) {
+      score += 2;
+    }
+
+    if (preset.storageOption === project.storageOption) {
+      score += 2;
+    }
+
+    score += countMatches(preset.featureSuggestions, projectFeatures);
+    score += countMatches(preset.screenSuggestions, projectScreens);
+
+    if (hasSameItems(preset.featureSuggestions, projectFeatures)) {
+      score += 5;
+    }
+
+    if (hasSameItems(preset.screenSuggestions, projectScreens)) {
+      score += 5;
+    }
+
+    return {
+      title: preset.title,
+      score
+    };
+  });
+
+  return scoredPresets.sort((left, right) => right.score - left.score)[0]?.title;
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ja-JP", {
     year: "numeric",
@@ -596,7 +651,7 @@ export default function Home() {
       screens: project.screens,
       extraNotes: project.extraNotes
     });
-    setSelectedPresetTitle("まだ決まっていない");
+    setSelectedPresetTitle(findBestPresetTitle(project) ?? defaultPreset.title);
     setCustomFeatures("");
     setCustomScreens("");
     setGeneratedPrompt(project.generatedPrompt);
