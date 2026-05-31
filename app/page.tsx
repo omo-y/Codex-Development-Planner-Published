@@ -967,7 +967,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main id="top" className="min-h-screen bg-white">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -1544,6 +1544,13 @@ export default function Home() {
           </div>
         </footer>
       </div>
+      <a
+        href="#top"
+        className="fixed bottom-4 right-4 rounded-md border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+        aria-label="ページ上部へ戻る"
+      >
+        TOPへ戻る
+      </a>
     </main>
   );
 }
