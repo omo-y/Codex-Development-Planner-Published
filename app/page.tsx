@@ -265,6 +265,47 @@ function loadStoredSession(): AuthSession | null {
   }
 }
 
+async function loadSessionFromUrlHash(): Promise<AuthSession | null> {
+  if (typeof window === "undefined" || !window.location.hash) {
+    return null;
+  }
+
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const accessToken = params.get("access_token");
+
+  if (!accessToken) {
+    return null;
+  }
+
+  const refreshToken = params.get("refresh_token") ?? undefined;
+  const { supabaseUrl, supabaseAnonKey } = getSupabaseBrowserConfig();
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${accessToken}`
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error("メール確認後のログイン情報を確認できませんでした。もう一度ログインしてください。");
+  }
+
+  const user = (await response.json()) as {
+    email?: string;
+  };
+
+  if (!user.email) {
+    throw new Error("メール確認後のユーザー情報を確認できませんでした。もう一度ログインしてください。");
+  }
+
+  return {
+    accessToken,
+    refreshToken,
+    email: user.email
+  };
+}
+
 type OptionCardProps = {
   title: string;
   description: string;
@@ -470,6 +511,48 @@ export default function Home() {
       : {};
   }
 
+  useEffect(() => {
+    let isMounted = true;
+
+    loadSessionFromUrlHash()
+      .then((session) => {
+        if (!isMounted || !session) {
+          return;
+        }
+
+        window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}`
+        );
+        setAuthSession(session);
+        setAuthEmail("");
+        setAuthPassword("");
+        setSuccessMessage("メール確認が完了し、ログインしました。");
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}`
+        );
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "メール確認後のログイン処理に失敗しました。"
+        );
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   async function loadHistory() {
     if (!authSession) {
       setHistory([]);
@@ -564,7 +647,9 @@ export default function Home() {
       const endpoint =
         authMode === "signin"
           ? `${supabaseUrl}/auth/v1/token?grant_type=password`
-          : `${supabaseUrl}/auth/v1/signup`;
+          : `${supabaseUrl}/auth/v1/signup?redirect_to=${encodeURIComponent(
+              `${siteUrl}/`
+            )}`;
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {

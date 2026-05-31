@@ -99,7 +99,19 @@ Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます
 5. Project Settings > API から `Project URL` と `anon public` key を確認し、`NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` に設定します。
 6. Project Settings > API から `service_role` key を確認し、`SUPABASE_SERVICE_ROLE_KEY` に設定します。
 7. Authentication > Providers で Email provider が有効になっていることを確認します。
-8. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
+8. Authentication > URL Configuration の Site URL に本番URLを設定します。
+9. Authentication > URL Configuration の Redirect URLs に本番URLを追加します。
+10. パスワードやホスト名は自分のSupabaseプロジェクトの値に置き換えてください。
+
+Vercel公開後の例:
+
+```text
+Site URL:
+https://codex-development-planner-published.vercel.app
+
+Redirect URLs:
+https://codex-development-planner-published.vercel.app/**
+```
 
 ## インストール手順
 
@@ -306,6 +318,8 @@ SupabaseのAuthentication設定を確認してください。
 - `NEXT_PUBLIC_SUPABASE_URL` が正しいか
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` が正しいか
 - メール確認が有効な場合、確認メールのリンクを開いたか
+- Authentication > URL Configuration の Site URL が本番URLになっているか
+- Redirect URLs に `https://your-domain.vercel.app/**` が追加されているか
 
 ### 新規登録で `email rate limit exceeded` が出る
 
