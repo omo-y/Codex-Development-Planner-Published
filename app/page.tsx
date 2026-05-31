@@ -103,6 +103,33 @@ const presetVisualLabels: Record<string, string> = {
   "まだ決まっていない": "?"
 };
 
+const quickNavigationItems = [
+  {
+    href: "#login",
+    label: "ログイン"
+  },
+  {
+    href: "#planner-form",
+    label: "入力"
+  },
+  {
+    href: "#generated-result",
+    label: "生成結果"
+  },
+  {
+    href: "#history",
+    label: "履歴"
+  },
+  {
+    href: "#usage-guide",
+    label: "使い方"
+  },
+  {
+    href: "#faq",
+    label: "FAQ"
+  }
+];
+
 function linesToItems(value: string) {
   return value
     .split(/\r?\n/)
@@ -1056,7 +1083,27 @@ export default function Home() {
           </div>
         )}
 
-        <section className="rounded-md border border-line bg-white p-4 sm:p-6">
+        <nav
+          aria-label="ページ内移動"
+          className="rounded-md border border-line bg-white p-3"
+        >
+          <div className="flex flex-wrap gap-2">
+            {quickNavigationItems.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="rounded-md border border-line bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+
+        <section
+          id="login"
+          className="scroll-mt-4 rounded-md border border-line bg-white p-4 sm:p-6"
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h2 className="text-lg font-bold text-ink">ログイン</h2>
@@ -1162,8 +1209,9 @@ export default function Home() {
         </section>
 
         <form
+          id="planner-form"
           onSubmit={handleGenerate}
-          className="grid gap-6 rounded-md border border-line bg-mist p-4 sm:p-6 lg:grid-cols-[1.05fr_0.95fr]"
+          className="scroll-mt-4 grid gap-6 rounded-md border border-line bg-mist p-4 sm:p-6 lg:grid-cols-[1.05fr_0.95fr]"
         >
           <section className="space-y-6">
             <div className="rounded-md border border-line bg-white p-4">
@@ -1414,7 +1462,10 @@ export default function Home() {
             </button>
           </section>
 
-          <section className="flex min-h-[520px] flex-col">
+          <section
+            id="generated-result"
+            className="flex min-h-[520px] scroll-mt-4 flex-col"
+          >
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-ink">生成結果</h2>
@@ -1443,6 +1494,14 @@ export default function Home() {
               {canCopy
                 ? "生成完了。内容を確認してからコピーしてください。"
                 : "未生成。左側の入力欄を埋めて「Codex用プロンプトを生成」を押してください。"}
+              {canCopy ? (
+                <a
+                  href="#history"
+                  className="ml-0 mt-2 inline-flex rounded-md border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 sm:ml-3 sm:mt-0"
+                >
+                  履歴を見る
+                </a>
+              ) : null}
             </div>
             <textarea
               value={generatedPrompt}
@@ -1483,7 +1542,10 @@ export default function Home() {
           </section>
         </form>
 
-        <section className="rounded-md border border-line bg-white p-4 sm:p-6">
+        <section
+          id="history"
+          className="scroll-mt-4 rounded-md border border-line bg-white p-4 sm:p-6"
+        >
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-ink">生成履歴</h2>
@@ -1640,7 +1702,10 @@ export default function Home() {
           )}
         </section>
 
-        <section className="rounded-md border border-line bg-white p-4 sm:p-6">
+        <section
+          id="usage-guide"
+          className="scroll-mt-4 rounded-md border border-line bg-white p-4 sm:p-6"
+        >
           <div className="max-w-3xl">
             <p className="text-sm font-semibold text-blue-700">
               AI開発補助ツールとしての使い方
@@ -1683,7 +1748,10 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rounded-md border border-line bg-white p-4 sm:p-6">
+        <section
+          id="faq"
+          className="scroll-mt-4 rounded-md border border-line bg-white p-4 sm:p-6"
+        >
           <h2 className="text-2xl font-bold tracking-normal text-ink">FAQ</h2>
           <div className="mt-5 grid gap-3">
             {faqItems.map((item) => (
@@ -1714,6 +1782,13 @@ export default function Home() {
           </div>
         </footer>
       </div>
+      <a
+        href="#generated-result"
+        className="fixed bottom-16 right-4 rounded-md border border-blue-200 bg-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
+        aria-label="生成結果へ移動"
+      >
+        生成結果へ
+      </a>
       <a
         href="#top"
         className="fixed bottom-4 right-4 rounded-md border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
