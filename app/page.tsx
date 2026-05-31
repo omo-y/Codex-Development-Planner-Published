@@ -38,6 +38,62 @@ type AuthSession = {
 
 const AUTH_STORAGE_KEY = "codex-development-planner-session";
 
+const seoFeatures = [
+  "アプリ案の整理",
+  "対象ユーザーの整理",
+  "開発環境の選択",
+  "使用AIの選択",
+  "保存方式の選択",
+  "Codex用プロンプト生成",
+  "生成履歴の保存",
+  "ユーザーごとの履歴管理"
+];
+
+const targetUsers = [
+  "Codexを使ってアプリ開発を始めたい初心者",
+  "個人開発者",
+  "プログラミング経験は少ないが自分用アプリを作りたい人",
+  "副業や学習目的で小さなアプリを作りたい人",
+  "Codexへの指示文作成で迷う人"
+];
+
+const usageSteps = [
+  "作りたいアプリの種類を選ぶ",
+  "アプリ名や目的を入力する",
+  "対象ユーザーを入力する",
+  "開発環境や保存方式を選ぶ",
+  "Codex用プロンプトを生成する",
+  "生成したプロンプトをCodexアプリに貼り付ける"
+];
+
+const faqItems = [
+  {
+    question: "Codex開発プランナーとは何ですか？",
+    answer:
+      "作りたいアプリのアイデアを整理し、Codexに渡しやすい開発プロンプトを生成するWebアプリです。"
+  },
+  {
+    question: "プログラミング初心者でも使えますか？",
+    answer:
+      "はい。対象ユーザー、必要機能、画面構成などを入力するだけで、Codex向けの指示文を作成できます。"
+  },
+  {
+    question: "Codexアプリと何が違いますか？",
+    answer:
+      "Codexアプリはコード作成を支援します。Codex開発プランナーは、その前段階として要件や指示文を整理する補助ツールです。"
+  },
+  {
+    question: "生成したプロンプトは保存できますか？",
+    answer:
+      "ログイン後、生成したプロンプト履歴を保存して後から見返せます。"
+  },
+  {
+    question: "スマホでも使えますか？",
+    answer:
+      "Webアプリとしてスマホからも利用できます。PWA対応によりホーム画面に追加して使える構成も想定しています。"
+  }
+];
+
 function linesToItems(value: string) {
   return value
     .split(/\r?\n/)
@@ -155,6 +211,38 @@ function formatAuthErrorMessage(message: string) {
   }
 
   return message;
+}
+
+function buildStructuredData(siteUrl: string) {
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Codex開発プランナー",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+      url: siteUrl,
+      description:
+        "作りたいアプリのアイデアを整理し、Codexアプリに貼り付けられる開発プロンプトを生成するAI開発補助ツールです。",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "JPY"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: faqItems.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.answer
+        }
+      }))
+    }
+  ];
 }
 
 function loadStoredSession(): AuthSession | null {
@@ -370,6 +458,9 @@ export default function Home() {
     (item) => item.title === selectedPresetTitle
   );
   const canCopy = generatedPrompt.trim().length > 0;
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000")
+    .replace(/\/$/, "");
+  const structuredData = buildStructuredData(siteUrl);
 
   function getAuthHeaders(): Record<string, string> {
     return authSession
@@ -792,17 +883,34 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData)
+        }}
+      />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
         <header className="border-b border-line pb-6">
           <p className="text-sm font-semibold text-blue-700">
-            Codex prompt planning tool
+            Codex開発プランナー
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-normal text-ink sm:text-4xl">
-            Codex開発プランナー
+            Codexでアプリ開発を始めるためのプロンプト設計ツール
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700">
-            作りたいアプリのアイデアを入力すると、要件・機能・画面構成・開発環境を整理し、Codexアプリに貼り付けられる開発プロンプトを生成します。
+            Codex開発プランナーは、作りたいアプリのアイデアを、Codexに渡しやすい開発指示書へ整理するWebアプリです。対象ユーザー、必要機能、画面構成、開発環境、保存方式を整理し、Codexアプリに貼り付けられるプロンプトを生成できます。
           </p>
+          <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-slate-700">
+            <span className="rounded-md bg-blue-50 px-3 py-2 text-blue-700">
+              Codex プロンプト生成
+            </span>
+            <span className="rounded-md bg-slate-100 px-3 py-2">
+              アプリ開発 初心者向け
+            </span>
+            <span className="rounded-md bg-slate-100 px-3 py-2">
+              個人開発の要件整理
+            </span>
+          </div>
         </header>
 
         {(errorMessage || successMessage) && (
@@ -1276,6 +1384,80 @@ export default function Home() {
             </div>
           )}
         </section>
+
+        <section className="rounded-md border border-line bg-white p-4 sm:p-6">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold text-blue-700">
+              AI開発補助ツールとしての使い方
+            </p>
+            <h2 className="mt-2 text-2xl font-bold tracking-normal text-ink">
+              Codexプロンプト生成の前に、アプリ開発の要件整理を進められます
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-slate-700">
+              Codex開発プランナーは、AIコーディングを始める前に、作りたいアプリの目的、対象ユーザー、必要機能、画面構成を整理するためのWebアプリです。個人開発や学習目的の小さなアプリでも、最初の指示文を整えることで、Codexアプリへ依頼しやすくなります。
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-md bg-mist p-4">
+              <h3 className="text-base font-bold text-ink">主な機能</h3>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                {seoFeatures.map((feature) => (
+                  <li key={feature}>- {feature}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-md bg-mist p-4">
+              <h3 className="text-base font-bold text-ink">対象ユーザー</h3>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                {targetUsers.map((user) => (
+                  <li key={user}>- {user}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-md bg-mist p-4">
+              <h3 className="text-base font-bold text-ink">使い方</h3>
+              <ol className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                {usageSteps.map((step, index) => (
+                  <li key={step}>
+                    {index + 1}. {step}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-md border border-line bg-white p-4 sm:p-6">
+          <h2 className="text-2xl font-bold tracking-normal text-ink">FAQ</h2>
+          <div className="mt-5 grid gap-3">
+            {faqItems.map((item) => (
+              <details
+                key={item.question}
+                className="rounded-md border border-line bg-white p-4"
+              >
+                <summary className="cursor-pointer text-sm font-bold text-ink">
+                  {item.question}
+                </summary>
+                <p className="mt-3 text-sm leading-7 text-slate-700">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <footer className="flex flex-col gap-3 border-t border-line py-6 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+          <p>Codex開発プランナー</p>
+          <div className="flex gap-4">
+            <a className="hover:text-blue-700" href="/privacy">
+              プライバシーポリシー
+            </a>
+            <a className="hover:text-blue-700" href="/terms">
+              利用規約
+            </a>
+          </div>
+        </footer>
       </div>
     </main>
   );

@@ -45,6 +45,8 @@ Codex開発プランナーは、作りたいアプリのアイデアを整理し
 - 履歴から入力内容を復元
 - 履歴削除
 - 生成プロンプトのコピー
+- SEO metadata / OGP / sitemap / robots.txt
+- PWA用manifest
 
 ## 使用技術
 
@@ -53,6 +55,7 @@ Codex開発プランナーは、作りたいアプリのアイデアを整理し
 - React
 - Tailwind CSS
 - Supabase Postgres
+- Supabase Auth
 - Prisma
 
 ## 必要なもの
@@ -69,6 +72,7 @@ Codex開発プランナーは、作りたいアプリのアイデアを整理し
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
+NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
 SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
@@ -76,9 +80,13 @@ SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
 
 `DATABASE_URL` はアプリ実行用の pooler 接続文字列、`DIRECT_URL` は Prisma migrate / Prisma Studio 用の direct 接続文字列を設定してください。
 
+`NEXT_PUBLIC_SITE_URL` はSEO metadata、OGP、sitemap.xml、robots.txtで使う公開URLです。ローカルでは `http://localhost:3000`、Vercel公開後は発行された本番URLを設定してください。
+
 `NEXT_PUBLIC_SUPABASE_URL` と `NEXT_PUBLIC_SUPABASE_ANON_KEY` は、Supabase Authでユーザー登録・ログインを行うために使います。
 
 `SUPABASE_SERVICE_ROLE_KEY` は、アカウント削除時にSupabase Authのユーザーを削除するためにサーバー側だけで使います。ブラウザに公開されないよう、`NEXT_PUBLIC_` を付けないでください。
+
+`NEXT_PUBLIC_` が付く環境変数はブラウザにも公開されます。秘密情報は `NEXT_PUBLIC_` を付けず、サーバー側だけで使ってください。
 
 Prisma CLIを使うときは `.env.local` ではなく `.env` が読まれます。ローカルで `npx prisma migrate dev` や `npx prisma studio` を使う場合は、同じ内容で `.env` も作成してください。
 
@@ -139,22 +147,72 @@ http://localhost:3000
 
 ## Vercelで公開する手順
 
-1. GitHubにこのリポジトリをpushします。
-2. Vercelで新しいプロジェクトとしてインポートします。
-3. VercelのEnvironment Variablesに `DATABASE_URL`、`DIRECT_URL`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` を追加します。
-4. `DATABASE_URL` には Supabase Postgres の pooler 接続文字列を設定します。
-5. `DIRECT_URL` には Supabase Postgres の direct 接続文字列を設定します。
-6. `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` には Supabase Project Settings > API の値を設定します。
-7. `SUPABASE_SERVICE_ROLE_KEY` はサーバー専用の秘密情報です。GitHubにコミットせず、Vercelの環境変数だけに設定してください。
-8. 初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
+1. GitHubにリポジトリを作成します。
+2. コードをpushします。
+3. Vercelにログインします。
+4. New ProjectからGitHubリポジトリを選択します。
+5. VercelのEnvironment Variablesに必要な環境変数を設定します。
+6. Deployします。
+7. 発行されたURLを確認します。
+8. `NEXT_PUBLIC_SITE_URL` を本番URLに設定します。
+9. 再デプロイします。
+10. `/sitemap.xml` と `/robots.txt` を確認します。
+
+初回デプロイ前、またはデプロイ後に以下でSupabaseへマイグレーションを適用します。
 
 ```bash
 npx prisma migrate deploy
 ```
 
-9. Vercelで再デプロイします。
-
 `postinstall` で `prisma generate` を実行するため、Vercelのビルド時にもPrisma Clientが生成されます。
+
+### Vercelに設定する環境変数
+
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `NEXT_PUBLIC_SITE_URL`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+`DATABASE_URL` には Supabase Postgres の pooler 接続文字列、`DIRECT_URL` には direct 接続文字列を設定します。
+
+`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY` は Supabase Project Settings > API の値を設定します。
+
+`SUPABASE_SERVICE_ROLE_KEY` はサーバー専用の秘密情報です。GitHubにコミットせず、Vercelの環境変数だけに設定してください。
+
+### OGP画像とPWAアイコン
+
+このリポジトリには初期表示用の画像を配置しています。公開前に必要に応じて差し替えてください。
+
+- `public/og-image.png`: 推奨サイズ 1200 x 630
+- `public/icons/icon-192.png`: PWA用 192 x 192
+- `public/icons/icon-512.png`: PWA用 512 x 512
+
+OGP画像には、タイトル「Codex開発プランナー」とサブタイトル「アプリ案をCodex用プロンプトに変換」を入れる想定です。
+
+### 公開前チェックリスト
+
+- `npm run lint` が成功する
+- `npx tsc --noEmit` が成功する
+- `npm run build` が成功する
+- SupabaseのURLやキーをコードに直接書いていない
+- `SUPABASE_SERVICE_ROLE_KEY` をクライアント側で使っていない
+- Vercelに必要な環境変数をすべて設定している
+- `NEXT_PUBLIC_SITE_URL` が公開URLになっている
+- `public/og-image.png` が表示意図に合っている
+
+### 公開後チェックリスト
+
+- トップページが表示される
+- ログインできる
+- プロンプト生成できる
+- 生成履歴が保存される
+- スマホ表示が崩れていない
+- `/sitemap.xml` が表示される
+- `/robots.txt` が表示される
+- OGP画像が表示される
+- PWAとしてホーム画面に追加できる
 
 ## ユーザー認証と履歴保存について
 
@@ -213,6 +271,7 @@ Supabase側でメール確認を有効にしている場合、新規登録後に
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/postgres?pgbouncer=true&connection_limit=1"
 DIRECT_URL="postgresql://USER:PASSWORD@DIRECT_HOST:5432/postgres"
+NEXT_PUBLIC_SITE_URL="https://YOUR_VERCEL_DOMAIN"
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT_ID.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
 SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
@@ -317,11 +376,19 @@ app/
   layout.tsx
   globals.css
   page.tsx
+  robots.ts
+  sitemap.ts
   api/
+    account/
+      route.ts
     projects/
       route.ts
     prompt/
       route.ts
+  privacy/
+    page.tsx
+  terms/
+    page.tsx
 lib/
   prisma.ts
   projectRepository.ts
@@ -333,6 +400,12 @@ types/
   project.ts
 prisma/
   schema.prisma
+public/
+  manifest.json
+  og-image.png
+  icons/
+    icon-192.png
+    icon-512.png
 .env.local.example
 README.md
 ```
