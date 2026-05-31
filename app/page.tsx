@@ -94,6 +94,15 @@ const faqItems = [
   }
 ];
 
+const presetVisualLabels: Record<string, string> = {
+  "記録・管理アプリ": "記",
+  "予約・受付アプリ": "予",
+  "学習・練習アプリ": "学",
+  "管理画面・業務ツール": "管",
+  AI活用ツール: "AI",
+  "まだ決まっていない": "?"
+};
+
 function linesToItems(value: string) {
   return value
     .split(/\r?\n/)
@@ -309,24 +318,43 @@ async function loadSessionFromUrlHash(): Promise<AuthSession | null> {
 type OptionCardProps = {
   title: string;
   description: string;
+  visualLabel: string;
   selected: boolean;
   onClick: () => void;
 };
 
-function OptionCard({ title, description, selected, onClick }: OptionCardProps) {
+function OptionCard({
+  title,
+  description,
+  visualLabel,
+  selected,
+  onClick
+}: OptionCardProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md border p-4 text-left transition ${
+      className={`flex min-h-[98px] gap-3 rounded-md border p-4 text-left transition ${
         selected
           ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
           : "border-line bg-white hover:border-blue-300 hover:bg-slate-50"
       }`}
     >
-      <span className="block text-sm font-bold text-ink">{title}</span>
-      <span className="mt-1 block text-xs leading-5 text-slate-600">
-        {description}
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-sm font-bold ${
+          selected
+            ? "border-blue-200 bg-white text-blue-700"
+            : "border-line bg-slate-50 text-slate-700"
+        }`}
+        aria-hidden="true"
+      >
+        {visualLabel}
+      </span>
+      <span>
+        <span className="block text-sm font-bold text-ink">{title}</span>
+        <span className="mt-1 block text-xs leading-5 text-slate-600">
+          {description}
+        </span>
       </span>
     </button>
   );
@@ -499,6 +527,24 @@ export default function Home() {
     (item) => item.title === selectedPresetTitle
   );
   const canCopy = generatedPrompt.trim().length > 0;
+  const requiredFields = [
+    {
+      label: "アプリ名",
+      completed: form.appName.trim().length > 0
+    },
+    {
+      label: "実現したいこと",
+      completed: form.appIdea.trim().length >= 10
+    },
+    {
+      label: "使う人",
+      completed: form.targetUser.trim().length > 0
+    }
+  ];
+  const completedRequiredFields = requiredFields.filter(
+    (field) => field.completed
+  ).length;
+  const isPromptReady = completedRequiredFields === requiredFields.length;
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000")
     .replace(/\/$/, "");
   const structuredData = buildStructuredData(siteUrl);
@@ -1120,6 +1166,45 @@ export default function Home() {
           className="grid gap-6 rounded-md border border-line bg-mist p-4 sm:p-6 lg:grid-cols-[1.05fr_0.95fr]"
         >
           <section className="space-y-6">
+            <div className="rounded-md border border-line bg-white p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-ink">
+                    入力の進捗
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    必須項目 {completedRequiredFields}/{requiredFields.length} 入力済み。すべて入力すると生成できます。
+                  </p>
+                </div>
+                <span
+                  className={`rounded-md px-3 py-2 text-sm font-semibold ${
+                    isPromptReady
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {isPromptReady ? "生成準備OK" : "入力途中"}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                {requiredFields.map((field) => (
+                  <div
+                    key={field.label}
+                    className={`rounded-md border px-3 py-2 text-sm ${
+                      field.completed
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        : "border-line bg-slate-50 text-slate-600"
+                    }`}
+                  >
+                    <span className="font-semibold">
+                      {field.completed ? "完了" : "未入力"}
+                    </span>
+                    <span className="ml-2">{field.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="rounded-md border border-blue-100 bg-white p-4">
               <h2 className="text-base font-bold text-ink">
                 1. まず、作りたいものに近いものを選んでください
@@ -1133,6 +1218,7 @@ export default function Home() {
                     key={preset.title}
                     title={preset.title}
                     description={preset.description}
+                    visualLabel={presetVisualLabels[preset.title] ?? "APP"}
                     selected={selectedPresetTitle === preset.title}
                     onClick={() => applyPreset(preset.title)}
                   />
@@ -1330,7 +1416,14 @@ export default function Home() {
 
           <section className="flex min-h-[520px] flex-col">
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-bold text-ink">生成結果</h2>
+              <div>
+                <h2 className="text-lg font-bold text-ink">生成結果</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {canCopy
+                    ? "生成済みです。コピーしてCodexアプリに貼り付けられます。"
+                    : "必須項目を入力して生成すると、ここにCodex用プロンプトが表示されます。"}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={handleCopy}
@@ -1339,6 +1432,17 @@ export default function Home() {
               >
                 コピー
               </button>
+            </div>
+            <div
+              className={`mb-3 rounded-md border px-4 py-3 text-sm ${
+                canCopy
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-blue-100 bg-blue-50 text-blue-800"
+              }`}
+            >
+              {canCopy
+                ? "生成完了。内容を確認してからコピーしてください。"
+                : "未生成。左側の入力欄を埋めて「Codex用プロンプトを生成」を押してください。"}
             </div>
             <textarea
               value={generatedPrompt}
@@ -1410,8 +1514,70 @@ export default function Home() {
               まだ生成履歴はありません。
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+            <>
+              <div className="grid gap-3 md:hidden">
+                {history.map((project) => (
+                  <article
+                    key={project.id}
+                    className="rounded-md border border-line bg-white p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-bold text-ink">
+                          {project.appName}
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {formatDate(project.createdAt)}
+                        </p>
+                      </div>
+                      <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                        {project.appType}
+                      </span>
+                    </div>
+                    <dl className="mt-4 grid gap-2 text-sm text-slate-700">
+                      <div>
+                        <dt className="text-xs font-semibold text-slate-500">
+                          開発環境
+                        </dt>
+                        <dd className="mt-1">{project.developmentStack}</dd>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <dt className="text-xs font-semibold text-slate-500">
+                            AI
+                          </dt>
+                          <dd className="mt-1">{project.aiOption}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-xs font-semibold text-slate-500">
+                            保存方式
+                          </dt>
+                          <dd className="mt-1">{project.storageOption}</dd>
+                        </div>
+                      </div>
+                    </dl>
+                    <div className="mt-4 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => restoreHistory(project)}
+                        className="flex-1 rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-800"
+                      >
+                        復元
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDelete(project.id)}
+                        className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+                      >
+                        削除
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-line text-slate-600">
                     <th className="py-3 pr-4 font-semibold">作成日時</th>
@@ -1432,14 +1598,8 @@ export default function Home() {
                       <td className="py-3 pr-4 text-slate-700">
                         {formatDate(project.createdAt)}
                       </td>
-                      <td className="py-3 pr-4">
-                        <button
-                          type="button"
-                          onClick={() => restoreHistory(project)}
-                          className="font-semibold text-blue-700 underline-offset-4 hover:underline"
-                        >
-                          {project.appName}
-                        </button>
+                      <td className="py-3 pr-4 font-semibold text-ink">
+                        {project.appName}
                       </td>
                       <td className="py-3 pr-4 text-slate-700">
                         {project.appType}
@@ -1454,19 +1614,29 @@ export default function Home() {
                         {project.storageOption}
                       </td>
                       <td className="py-3">
-                        <button
-                          type="button"
-                          onClick={() => void handleDelete(project.id)}
-                          className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
-                        >
-                          削除
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => restoreHistory(project)}
+                            className="rounded-md bg-blue-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-800"
+                          >
+                            復元
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleDelete(project.id)}
+                            className="rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50"
+                          >
+                            削除
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            </>
           )}
         </section>
 
